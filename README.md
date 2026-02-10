@@ -45,6 +45,6 @@ The ConnectRPC base URL is `http://localhost:8080/rpc`.
 
 ## Notes
 - The analyzer runs a DSPy `RLM` (Recursive Language Model) and requires:
-  - `CODELENS_DSPY_LM` (e.g. `openrouter/google/gemini-2.5-flash` or `openai/gpt-4o-mini`)
+  - `CODELENS_DSPY_LM` (e.g. `xai/grok-code-fast-1`, `openrouter/google/gemini-2.5-flash`, or `openai/gpt-4o-mini`)
   - Deno installed and on `PATH` for the default sandbox
-  - Provider credentials as required by your chosen LM (e.g. `OPENROUTER_API_KEY` or `OPENAI_API_KEY`)
+  - Provider credentials as required by your chosen LM (e.g. `XAI_API_KEY`, `OPENROUTER_API_KEY`, or `OPENAI_API_KEY`)
