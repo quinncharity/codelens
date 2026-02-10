@@ -1,10 +1,104 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { Loader2, Terminal, GitBranch, Sparkles, Trash2 } from 'lucide-react'
+import { type ReactNode, useEffect, useState } from 'react'
+import { Loader2, Terminal, GitBranch, Sparkles, Trash2, Zap, Cpu, Globe } from 'lucide-react'
 
 import { analysisClient } from '../lib/rpc'
 
+interface ExampleRepo {
+  name: string
+  description: string
+  url: string
+  category: string
+}
+
+const exampleRepos: ExampleRepo[] = [
+  // Frameworks & Libraries
+  { name: 'facebook/react', description: 'A declarative, efficient, and flexible JavaScript library for building user interfaces.', url: 'https://github.com/facebook/react', category: 'Frameworks' },
+  { name: 'vercel/next.js', description: 'The React Framework for the Web. Used by some of the world\'s largest companies.', url: 'https://github.com/vercel/next.js', category: 'Frameworks' },
+  { name: 'shadcn-ui/ui', description: 'Beautifully designed components that you can copy and paste into your apps.', url: 'https://github.com/shadcn-ui/ui', category: 'Frameworks' },
+  
+  // AI & Machine Learning
+  { name: 'langchain-ai/langchain', description: 'Building applications with LLMs through composability.', url: 'https://github.com/langchain-ai/langchain', category: 'AI & ML' },
+  { name: 'microsoft/generative-ai-for-beginners', description: '21 Lessons, Get Started Building with Generative AI.', url: 'https://github.com/microsoft/generative-ai-for-beginners', category: 'AI & ML' },
+  { name: 'anthropics/anthropic-cookbook', description: 'A collection of recipes showcasing how to build with Claude.', url: 'https://github.com/anthropics/anthropic-cookbook', category: 'AI & ML' },
+  
+  // Developer Tools
+  { name: 'microsoft/vscode', description: 'Visual Studio Code is a code editor redefined and optimized for building modern web and cloud applications.', url: 'https://github.com/microsoft/vscode', category: 'Developer Tools' },
+  { name: 'kubernetes/kubernetes', description: 'Production-Grade Container Scheduling and Management.', url: 'https://github.com/kubernetes/kubernetes', category: 'Developer Tools' },
+]
+
+const categoryIcons: Record<string, ReactNode> = {
+  'Frameworks': <Zap className="w-4 h-4" />,
+  'AI & ML': <Cpu className="w-4 h-4" />,
+  'Developer Tools': <Globe className="w-4 h-4" />,
+}
+
 export const Route = createFileRoute('/')({ component: Home })
+
+function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => void, running: boolean }) {
+  const grouped = exampleRepos.reduce((acc, repo) => {
+    if (!acc[repo.category]) acc[repo.category] = []
+    acc[repo.category].push(repo)
+    return acc
+  }, {} as Record<string, ExampleRepo[]>)
+
+  return (
+    <div className="w-full animate-fade-in-up">
+      <h2 className="text-sm font-mono tracking-wider uppercase text-cyan-400/80 mb-4 flex items-center gap-2">
+        <Sparkles className="w-4 h-4" />
+        Try an Example
+      </h2>
+      
+      {Object.entries(grouped).map(([category, repos], groupIdx) => (
+        <div key={category} className="mb-6 last:mb-0">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-cyan-400/60">{categoryIcons[category]}</span>
+            <h3 className="text-xs font-mono uppercase tracking-wider text-cyan-400/60">{category}</h3>
+            <div className="flex-1 h-px bg-cyan-500/10" />
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {repos.map((repo, idx) => (
+              <button
+                key={repo.name}
+                onClick={() => onSelect(repo)}
+                disabled={running}
+                className="group relative text-left bg-black/40 border border-cyan-500/20 rounded-lg p-4 
+                  hover:border-cyan-400/40 hover:bg-cyan-500/5
+                  transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
+                  animate-fade-in-up"
+                style={{ animationDelay: `${(groupIdx * 100) + (idx * 50)}ms` }}
+              >
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                  <div className="absolute inset-0 rounded-lg bg-cyan-500/5" />
+                  <div className="absolute inset-0 rounded-lg shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]" />
+                </div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <GitBranch className="w-3.5 h-3.5 text-cyan-400/60 group-hover:text-cyan-400 transition-colors" />
+                    <span className="font-mono text-sm text-foreground group-hover:text-cyan-300 transition-colors truncate">
+                      {repo.name}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                    {repo.description}
+                  </p>
+                </div>
+                
+                {/* Arrow indicator */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-1 group-hover:translate-x-0">
+                  <span className="text-cyan-400/60 text-xs font-mono">→</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function Home() {
   const navigate = useNavigate()
@@ -250,6 +344,20 @@ function Home() {
             )}
           </button>
         </form>
+
+        {/* Example Repos */}
+        {!running && (
+          <div className="mt-10">
+            <ExampleRepos 
+              onSelect={(repo) => {
+                setGitUrl(repo.url)
+                setRef('')
+                void start({ gitUrlOverride: repo.url, refOverride: '' })
+              }}
+              running={running}
+            />
+          </div>
+        )}
 
         {/* Analysis Progress */}
         {running && (
