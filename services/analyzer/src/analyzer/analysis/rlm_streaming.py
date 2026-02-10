@@ -7,6 +7,76 @@ from typing import Any
 
 from analyzer.analysis.engine import EmitFn
 
+# ---------------------------------------------------------------------------
+# User-friendly status messages per agent and event kind.
+# Messages cycle: index = min(call_count - 1, len(messages) - 1).
+# ---------------------------------------------------------------------------
+
+AGENT_MESSAGES: dict[str, dict[str, list[str]]] = {
+    "summary": {
+        "LM_START": [
+            "Reading repository structure",
+            "Analyzing project configuration",
+            "Understanding codebase purpose",
+            "Writing summary",
+        ],
+        "TOOL_START": [
+            "Scanning files",
+            "Reading manifests",
+            "Checking entrypoints",
+        ],
+    },
+    "frameworks": {
+        "LM_START": [
+            "Scanning dependency manifests",
+            "Detecting libraries and tools",
+            "Classifying framework categories",
+            "Verifying versions",
+        ],
+        "TOOL_START": [
+            "Reading package files",
+            "Searching for imports",
+            "Cross-referencing dependencies",
+        ],
+    },
+    "patterns": {
+        "LM_START": [
+            "Exploring project architecture",
+            "Identifying design patterns",
+            "Analyzing code organization",
+            "Evaluating code quality",
+            "Checking for AI agent rules",
+        ],
+        "TOOL_START": [
+            "Scanning directory structure",
+            "Reading configuration files",
+            "Searching for patterns",
+        ],
+    },
+    "insights": {
+        "LM_START": [
+            "Evaluating codebase health",
+            "Identifying risks and gaps",
+            "Assessing architecture decisions",
+            "Generating recommendations",
+        ],
+        "TOOL_START": [
+            "Checking test coverage",
+            "Scanning for security concerns",
+            "Analyzing deployment setup",
+        ],
+    },
+}
+
+
+def _friendly_message(agent_name: str, kind: str, call_count: int) -> str:
+    """Pick a user-friendly message for the given agent/kind/call index."""
+    messages = AGENT_MESSAGES.get(agent_name, {}).get(kind, [])
+    if not messages:
+        return f"Processing step {call_count}"
+    idx = min(call_count - 1, len(messages) - 1)
+    return messages[idx]
+
 
 def _split_kind(message: str) -> tuple[str, str]:
     s = (message or "").strip()
@@ -54,7 +124,7 @@ async def run_sub_agent(
     *,
     dspy: Any,
     rlm: Any,
-    repo_snapshot: str,
+    repo_snapshot: Any,
     query: str,
     emit: EmitFn,
     phase: str,
@@ -79,7 +149,7 @@ async def run_sub_agent(
                 await emit(
                     phase,
                     float(prog),
-                    f"Running... ({int(elapsed)}s elapsed, max_calls={max_llm_calls})",
+                    "Still working\u2026",
                     agent=agent,
                     kind="HEARTBEAT",
                     step=step,
@@ -99,27 +169,30 @@ async def run_sub_agent(
     if streamify_fn and StatusMessageProvider and StatusMessage:
 
         class AnalysisStatusProvider(StatusMessageProvider):  # type: ignore[misc,valid-type]
-            def __init__(self) -> None:
+            def __init__(self, agent_name: str) -> None:
+                self.agent_name = agent_name
                 self.lm_calls = 0
+                self.tool_calls = 0
 
             def lm_start_status_message(self, instance, inputs):  # type: ignore[no-untyped-def]
                 self.lm_calls += 1
-                return f"LM_START: LM call #{self.lm_calls}"
+                msg = _friendly_message(self.agent_name, "LM_START", self.lm_calls)
+                return f"LM_START: {msg}"
 
             def lm_end_status_message(self, outputs):  # type: ignore[no-untyped-def]
-                return f"LM_END: LM call #{self.lm_calls} complete"
+                msg = _friendly_message(self.agent_name, "LM_START", self.lm_calls)
+                return f"LM_END: {msg}"
 
             def tool_start_status_message(self, instance, inputs):  # type: ignore[no-untyped-def]
-                name = getattr(instance, "name", None)
-                if not name:
-                    name = getattr(getattr(instance, "__class__", None), "__name__", None) or "tool"
-                return f"TOOL_START: {name}"
+                self.tool_calls += 1
+                msg = _friendly_message(self.agent_name, "TOOL_START", self.tool_calls)
+                return f"TOOL_START: {msg}"
 
             def tool_end_status_message(self, outputs):  # type: ignore[no-untyped-def]
-                return "TOOL_END: tool complete"
+                return "TOOL_END: done"
 
         try:
-            provider = AnalysisStatusProvider()
+            provider = AnalysisStatusProvider(agent)
             stream_rlm = streamify_fn(rlm, status_message_provider=provider)
 
             pred: Any | None = None

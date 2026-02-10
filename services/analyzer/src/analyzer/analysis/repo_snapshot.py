@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from pydantic import BaseModel, ConfigDict, Field
+
 _EXCLUDE_DIRS = {
     ".git",
     "node_modules",
@@ -119,6 +121,58 @@ _SENSITIVE_SUFFIXES = {
 }
 
 
+class SnapshotMeta(BaseModel):
+    repo_name: str
+    generated_at: str  # ISO8601 UTC timestamp
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+
+class SnapshotTree(BaseModel):
+    file_count_indexed: int
+    paths_sample: list[str] = Field(default_factory=list)
+    top_level: list[str] = Field(default_factory=list)
+    excluded_dirs: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+
+class SnapshotFile(BaseModel):
+    path: str
+    bytes: int
+    truncated: bool
+    content: str
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+
+class SnapshotLimits(BaseModel):
+    max_bytes: int
+    max_files: int
+    max_tree_paths: int
+    max_manifests: int
+    max_snippets: int
+    per_file_max_bytes: int
+    snippet_max_bytes: int
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+
+class RepoSnapshot(BaseModel):
+    version: int = 1
+    meta: SnapshotMeta
+    tree: SnapshotTree
+    manifests: list[SnapshotFile] = Field(default_factory=list)
+    snippets: list[SnapshotFile] = Field(default_factory=list)
+    limits: SnapshotLimits
+    budget_remaining_bytes: int = 0
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    def to_json(self) -> str:
+        return json.dumps(self.model_dump(mode="json"), ensure_ascii=True, separators=(",", ":"))
+
+
 @dataclass
 class _Budget:
     remaining: int
@@ -214,9 +268,9 @@ def build_repo_snapshot(
     max_snippets: int = 20,
     per_file_max_bytes: int = 200_000,
     snippet_max_bytes: int = 20_000,
-) -> str:
+) -> RepoSnapshot:
     """
-    Build a JSON snapshot of a repository suitable for an RLM to explore.
+    Build a typed, JSON-serializable snapshot of a repository suitable for an RLM to explore.
 
     The snapshot is "manifest-focused": it includes a file tree sample plus raw
     contents of key manifests/configs and short snippets of likely entrypoints.
@@ -370,7 +424,7 @@ def build_repo_snapshot(
 
     payload = _dump()
     if len(payload) <= max_bytes:
-        return payload
+        return RepoSnapshot.model_validate(snapshot)
 
     # Enforce a hard cap on the *serialized* snapshot size (best-effort).
     # Strategy: progressively drop least-important data while keeping JSON valid.
@@ -414,6 +468,8 @@ def build_repo_snapshot(
             continue
 
         # Nothing left to drop.
-        break
+            break
 
-    return _dump()
+    # Final best-effort validation; if this fails we want a clear error rather than silently
+    # returning malformed data into the RLM.
+    return RepoSnapshot.model_validate(snapshot)

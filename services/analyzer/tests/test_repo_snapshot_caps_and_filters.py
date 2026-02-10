@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from analyzer.analysis.repo_snapshot import build_repo_snapshot
@@ -30,13 +29,9 @@ def test_repo_snapshot_caps_and_filters(tmp_path: Path) -> None:
         snippet_max_bytes=200,
     )
 
-    assert len(snap) <= 2_000
+    assert len(snap.to_json()) <= 2_000
 
-    data = json.loads(snap)
-    manifests = data.get("manifests", [])
-    assert isinstance(manifests, list)
-
-    manifest_paths = {m.get("path") for m in manifests if isinstance(m, dict)}
+    manifest_paths = {m.path for m in snap.manifests}
     assert ".env" not in manifest_paths
     assert ".env.example" in manifest_paths
     assert "AGENTS.md" in manifest_paths

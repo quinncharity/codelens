@@ -1,41 +1,8 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from analyzer.models import AnalysisResultData, Framework, Insight, Pattern
-
-_ALLOWED_FRAMEWORK_CATEGORIES = {
-    "language",
-    "web",
-    "backend",
-    "build",
-    "testing",
-    "infra",
-    "database",
-    "orm",
-    "ai",
-    "observability",
-    "api",
-    "tooling",
-    "unknown",
-}
-
-_ALLOWED_PATTERN_CATEGORIES = {
-    "architecture",
-    "implementation",
-    "quality",
-    "ai_rule",
-    "unknown",
-}
-
-
-def _clamp01(x: float) -> float:
-    if x < 0.0:
-        return 0.0
-    if x > 1.0:
-        return 1.0
-    return x
 
 
 def _as_str(v: Any) -> str:
@@ -46,152 +13,69 @@ def _as_str(v: Any) -> str:
     return str(v)
 
 
-def _parse_json_array(raw: Any, *, field: str) -> list[Any]:
+def _require_list(raw: Any, *, field: str) -> list[Any]:
     if raw is None:
         return []
     if isinstance(raw, list):
         return raw
-    if isinstance(raw, str):
-        s = _sanitize_json_text(raw)
-        if not s:
-            return []
-        try:
-            val = json.loads(s)
-        except Exception as e:
-            raise RuntimeError(f"RLM returned invalid JSON for {field}") from e
-        if not isinstance(val, list):
-            raise RuntimeError(f"RLM returned non-array JSON for {field}")
-        return val
-    raise RuntimeError(f"RLM returned unexpected type for {field}: {type(raw).__name__}")
-
-
-def _sanitize_json_text(s: str) -> str:
-    s = s.strip()
-    if not s:
-        return ""
-
-    # Strip Markdown fences like ```json ... ```
-    if s.startswith("```"):
-        lines = s.splitlines()
-        if lines and lines[0].lstrip().startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        s = "\n".join(lines).strip()
-
-    # If the model included extra text, try to extract a JSON array substring.
-    if s and not s.lstrip().startswith("["):
-        i = s.find("[")
-        j = s.rfind("]")
-        if i != -1 and j != -1 and j > i:
-            s = s[i : j + 1].strip()
-
-    return s
-
-
-def _normalize_evidence_paths(v: Any) -> list[str]:
-    if v is None:
-        return []
-    if not isinstance(v, list):
-        return []
-    out: list[str] = []
-    for item in v:
-        if not isinstance(item, str):
-            continue
-        p = item.strip()
-        if not p:
-            continue
-        # Keep repo-relative, POSIX-ish paths only.
-        if p.startswith("/") or p.startswith("\\"):
-            continue
-        if "://" in p:
-            continue
-        # Avoid Windows drive paths like C:\...
-        if len(p) >= 2 and p[1] == ":":
-            continue
-        out.append(p)
-        if len(out) >= 8:
-            break
-    return out
+    raise RuntimeError(f"RLM returned non-array for {field}: {type(raw).__name__}")
 
 
 def parse_analysis_result(
     *,
     summary: Any,
-    frameworks_json: Any,
-    patterns_json: Any,
-    insights_json: Any,
+    frameworks: Any,
+    patterns: Any,
+    insights: Any,
 ) -> AnalysisResultData:
-    frameworks_raw = _parse_json_array(frameworks_json, field="frameworks_json")
-    patterns_raw = _parse_json_array(patterns_json, field="patterns_json")
-    insights_raw = _parse_json_array(insights_json, field="insights_json")
+    """
+    Validate/normalize the RLM outputs into a typed AnalysisResultData.
 
-    frameworks: list[Framework] = []
+    Strictness:
+    - Top-level outputs must be arrays (or None); stringified JSON is rejected.
+    - Individual invalid items are dropped.
+    """
+    frameworks_raw = _require_list(frameworks, field="frameworks")
+    patterns_raw = _require_list(patterns, field="patterns")
+    insights_raw = _require_list(insights, field="insights")
+
+    out_frameworks: list[Framework] = []
     for item in frameworks_raw:
-        if not isinstance(item, dict):
-            continue
-        name = _as_str(item.get("name")).strip()
-        if not name:
-            continue
-        version = _as_str(item.get("version")).strip()
-        category = _as_str(item.get("category")).strip().lower() or "unknown"
-        if category not in _ALLOWED_FRAMEWORK_CATEGORIES:
-            category = "unknown"
-
-        conf_v = item.get("confidence", 0.0)
         try:
-            conf = _clamp01(float(conf_v))
+            fw = item if isinstance(item, Framework) else Framework.model_validate(item)
         except Exception:
-            conf = 0.0
+            continue
+        if not fw.name.strip():
+            continue
+        out_frameworks.append(fw)
 
-        frameworks.append(Framework(name=name, version=version, category=category, confidence=conf))
-
-    patterns: list[Pattern] = []
+    out_patterns: list[Pattern] = []
     for item in patterns_raw:
-        if not isinstance(item, dict):
-            continue
-        name = _as_str(item.get("name")).strip()
-        if not name:
-            continue
-        category = _as_str(item.get("category")).strip().lower() or "unknown"
-        if category not in _ALLOWED_PATTERN_CATEGORIES:
-            category = "unknown"
-        description = _as_str(item.get("description")).strip()
-        evidence_paths = _normalize_evidence_paths(item.get("evidence_paths"))
-
-        conf_v = item.get("confidence", 0.0)
         try:
-            conf = _clamp01(float(conf_v))
+            pat = item if isinstance(item, Pattern) else Pattern.model_validate(item)
         except Exception:
-            conf = 0.0
+            continue
+        if not pat.name.strip():
+            continue
+        out_patterns.append(pat)
 
-        patterns.append(
-            Pattern(
-                name=name,
-                category=category,
-                description=description,
-                evidence_paths=evidence_paths,
-                confidence=conf,
-            )
-        )
-
-    insights: list[Insight] = []
+    out_insights: list[Insight] = []
     for item in insights_raw:
-        if not isinstance(item, dict):
+        try:
+            ins = item if isinstance(item, Insight) else Insight.model_validate(item)
+        except Exception:
             continue
-        category = _as_str(item.get("category")).strip() or "unknown"
-        title = _as_str(item.get("title")).strip()
-        description = _as_str(item.get("description")).strip()
-        if not title or not description:
+        if not ins.title.strip() or not ins.description.strip():
             continue
-        insights.append(Insight(category=category, title=title, description=description))
+        out_insights.append(ins)
 
-    frameworks.sort(key=lambda x: (-x.confidence, x.name))
-    patterns.sort(key=lambda x: (-x.confidence, x.name))
+    out_frameworks.sort(key=lambda x: (-x.confidence, x.name))
+    out_patterns.sort(key=lambda x: (-x.confidence, x.name))
 
     return AnalysisResultData(
         summary=_as_str(summary).strip(),
-        frameworks=frameworks,
-        patterns=patterns,
-        insights=insights,
+        frameworks=out_frameworks,
+        patterns=out_patterns,
+        insights=out_insights,
     )
+

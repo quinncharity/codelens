@@ -4,22 +4,20 @@ import json
 from pathlib import PurePosixPath
 from typing import Any
 
+from analyzer.analysis.repo_snapshot import RepoSnapshot
+
 
 def _as_snapshot_dict(snapshot: Any) -> dict[str, Any]:
     """
-    Accept either the raw repo_snapshot JSON string or an already-parsed dict.
-
-    Allowing dict input lets the RLM parse once (json.loads) and reuse the object
-    across tool calls to avoid repeated JSON parsing overhead.
+    Accept either a RepoSnapshot model or a JSON-compatible dict.
     """
+    if isinstance(snapshot, RepoSnapshot):
+        return snapshot.model_dump(mode="json")
     if isinstance(snapshot, dict):
         return snapshot
     if isinstance(snapshot, str):
-        val = json.loads(snapshot)
-        if isinstance(val, dict):
-            return val
-        raise TypeError("repo_snapshot JSON must decode to an object")
-    raise TypeError(f"repo_snapshot must be a JSON string or dict, got {type(snapshot).__name__}")
+        raise TypeError("repo_snapshot must be a dict/RepoSnapshot; JSON strings are no longer supported")
+    raise TypeError(f"repo_snapshot must be a dict/RepoSnapshot, got {type(snapshot).__name__}")
 
 
 def list_files(repo_snapshot: Any, pattern: str | None = None) -> str:
@@ -27,7 +25,7 @@ def list_files(repo_snapshot: Any, pattern: str | None = None) -> str:
     List file paths in the snapshot (tree sample + manifest/snippet paths), optionally filtered.
 
     Args:
-        repo_snapshot: The repo_snapshot JSON string (or parsed dict).
+        repo_snapshot: The RepoSnapshot (or a JSON-compatible dict).
         pattern: Optional glob pattern like '*.py' or 'src/**/*.ts'.
 
     Returns:
@@ -134,4 +132,3 @@ def search_files(repo_snapshot: Any, keyword: str) -> str:
                         return json.dumps(matches, ensure_ascii=True)
 
     return json.dumps(matches, ensure_ascii=True)
-

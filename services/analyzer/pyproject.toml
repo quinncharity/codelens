@@ -5,6 +5,7 @@ requires-python = ">=3.13"
 dependencies = [
   "connect-python @ git+https://github.com/connectrpc/connect-python.git",
   "dspy>=3.1.0",
+  "pydantic>=2.0.0",
   "protobuf",
   "python-dotenv>=1.0.0",
   "starlette",
