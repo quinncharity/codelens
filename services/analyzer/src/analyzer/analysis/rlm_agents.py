@@ -45,7 +45,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "OUTPUT:\n"
             "- summary: 1-4 sentences.\n"
         ),
-        max_iterations=5,
+        max_iterations=50,
         max_llm_calls=10,
     ),
     SubAgentConfig(
@@ -69,7 +69,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- category must be one of: language|web|backend|build|testing|infra|database|orm|ai|observability|api|tooling|unknown\n"
             "- Use [] if none found.\n"
         ),
-        max_iterations=8,
+        max_iterations=50,
         max_llm_calls=20,
     ),
     SubAgentConfig(
@@ -95,7 +95,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- evidence_paths must be repo-relative paths present in the snapshot.\n"
             "- Use [] if none found.\n"
         ),
-        max_iterations=12,
+        max_iterations=50,
         max_llm_calls=30,
     ),
     SubAgentConfig(
@@ -119,7 +119,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- category examples: architecture, quality, risk, ai.\n"
             "- Use [] if none found.\n"
         ),
-        max_iterations=8,
+        max_iterations=50,
         max_llm_calls=15,
     ),
 ]
