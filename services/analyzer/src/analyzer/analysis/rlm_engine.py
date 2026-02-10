@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import math
 import os
 import shutil
 import subprocess
+import time
 from functools import lru_cache
 from pathlib import Path
 
@@ -55,8 +58,8 @@ class RLMEngine:
             _validate_provider_env(sub_lm_name)
         sub_lm = _make_lm(dspy, sub_lm_name, temperature=0.0) if sub_lm_name else None
 
-        max_iterations = _env_int("CODELENS_RLM_MAX_ITERATIONS", 12)
-        max_llm_calls = _env_int("CODELENS_RLM_MAX_LLM_CALLS", 40)
+        max_iterations = _env_int("CODELENS_RLM_MAX_ITERATIONS", 8)
+        max_llm_calls = _env_int("CODELENS_RLM_MAX_LLM_CALLS", 25)
         max_output_chars = _env_int("CODELENS_RLM_MAX_OUTPUT_CHARS", 100_000)
         verbose = _env_bool("CODELENS_RLM_VERBOSE", False)
 
@@ -73,9 +76,33 @@ class RLMEngine:
 
         query = _analysis_prompt()
         await emit("ANALYZE", 0.55, "Running RLM analysis")
+
+        # RLM runs can take a while; keep the UI alive with periodic status updates.
+        async def _heartbeat() -> None:
+            start = time.monotonic()
+            while True:
+                await asyncio.sleep(2.0)
+                elapsed = time.monotonic() - start
+                # Smooth, capped progress bump while RLM is running.
+                p0, p1 = 0.55, 0.84
+                ratio = 1.0 - math.exp(-elapsed / 45.0)
+                prog = min(p1, p0 + (p1 - p0) * ratio)
+                await emit(
+                    "ANALYZE",
+                    float(prog),
+                    f"RLM running... ({int(elapsed)}s elapsed, max_iters={max_iterations}, max_calls={max_llm_calls})",
+                )
+
+        hb = asyncio.create_task(_heartbeat())
         try:
             pred = await rlm.aforward(repo_snapshot=snapshot, query=query)
         finally:
+            hb.cancel()
+            try:
+                await hb
+            except Exception:
+                pass
+
             # dspy.RLM does not manage the lifecycle of a user-provided interpreter.
             try:
                 interpreter.shutdown()
@@ -147,21 +174,31 @@ def _analysis_prompt() -> str:
         "language, web, backend, build, testing, infra, database, orm, ai, "
         "observability, api, tooling, unknown"
     )
+    allowed_pattern_categories = "architecture, implementation, quality, ai_rule, unknown"
     return (
         "You are CodeLens, a repository analyzer. You are given `repo_snapshot`, a JSON string "
         "with a file tree sample plus contents of key manifests/configs and code snippets.\n\n"
-        "Task: identify frameworks, architectural patterns, and produce a concise summary.\n\n"
+        "Task: identify frameworks, architecture patterns, implementation patterns, code quality findings, "
+        "and any AI/agent-specific rules or instructions in the codebase. Produce a concise summary.\n\n"
         "Rules:\n"
         "- Use only evidence from `repo_snapshot`.\n"
         "- Prefer high precision. Lower confidence when you infer rather than observe.\n"
         "- Evidence paths must be repo-relative paths that appear in the snapshot tree/manifests/snippets.\n"
         "- Output MUST be valid JSON for the *_json fields (double quotes, arrays of objects).\n\n"
+        "- Keep outputs small and high-signal: max 24 patterns total, max 6 per category, max 10 insights.\n"
+        "- Evidence paths: max 8 per pattern.\n\n"
         "Return fields:\n"
         "1) summary: 1-4 sentences describing what the repo is.\n"
         "2) frameworks_json: JSON array of {name, version, category, confidence}.\n"
         f"   category must be one of: {allowed_categories}.\n"
-        "3) patterns_json: JSON array of {name, description, evidence_paths, confidence}.\n"
-        "4) insights_json: JSON array of {category, title, description}.\n\n"
+        "3) patterns_json: JSON array of {name, category, description, evidence_paths, confidence}.\n"
+        f"   category must be one of: {allowed_pattern_categories}.\n"
+        "   - architecture: system structure, boundaries, layering, deployment shapes.\n"
+        "   - implementation: coding patterns, library usage patterns, conventions.\n"
+        "   - quality: maintainability, testing gaps, risky patterns, performance issues.\n"
+        "   - ai_rule: AI/agent rules/instructions (AGENTS.md, copilot instructions, cursor rules, etc.).\n"
+        "4) insights_json: JSON array of {category, title, description}.\n"
+        "   category examples: architecture, quality, risk, ai.\n\n"
         "If a list is empty, return [] (as JSON)."
     )
 

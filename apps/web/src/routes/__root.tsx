@@ -45,7 +45,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body className="min-h-dvh">
         <div className="min-h-dvh">
           <Header />
-          {children}
+          <div style={{ paddingTop: 'var(--app-header-h)' }}>{children}</div>
         </div>
         <TanStackDevtools
           config={{

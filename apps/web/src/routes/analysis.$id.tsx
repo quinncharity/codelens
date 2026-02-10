@@ -59,13 +59,76 @@ function AnalysisPage() {
   }, [id, result?.status])
 
   const statusVariant: 'default' | 'secondary' | 'destructive' | 'outline' =
-    result?.status === 'ERROR'
+    result?.status === 'FAILED'
       ? 'destructive'
-      : result?.status === 'DONE'
+      : result?.status === 'SUCCEEDED'
         ? 'default'
         : result?.status === 'RUNNING'
           ? 'secondary'
           : 'outline'
+
+  const patterns: any[] = Array.isArray(result?.patterns) ? result.patterns : []
+  const patternsFor = (category: string) =>
+    patterns.filter(
+      (p) => String(p?.category ?? 'unknown').toLowerCase() === category,
+    )
+  const otherPatterns = patterns.filter(
+    (p) =>
+      !['architecture', 'implementation', 'quality', 'ai_rule'].includes(
+        String(p?.category ?? 'unknown').toLowerCase(),
+      ),
+  )
+
+  const renderPatterns = (
+    items: any[],
+    emptyText: string,
+  ) => {
+    if (!items?.length) {
+      return <div className="text-sm text-muted-foreground">{emptyText}</div>
+    }
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Evidence</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="text-right">Confidence</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((p: any) => {
+            const evidence: string[] = Array.isArray(p?.evidencePaths)
+              ? p.evidencePaths.map((x: any) => String(x)).filter(Boolean)
+              : []
+            const shown = evidence.slice(0, 3)
+            const extra = Math.max(0, evidence.length - shown.length)
+            const evidenceText =
+              shown.join(', ') + (extra ? ` +${extra}` : '')
+
+            return (
+              <TableRow key={`${p.category || 'unknown'}:${p.name}`}>
+                <TableCell className="font-mono">{p.name}</TableCell>
+                <TableCell
+                  className="font-mono text-xs text-muted-foreground break-words"
+                  title={evidence.join(', ')}
+                >
+                  {evidenceText || '—'}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {p.description || '—'}
+                </TableCell>
+                <TableCell className="text-right font-mono">
+                  {typeof p.confidence === 'number' ? p.confidence.toFixed(2) : '—'}
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    )
+  }
 
   return (
     <main className="container py-10">
@@ -179,6 +242,93 @@ function AnalysisPage() {
                   )}
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Architecture Patterns</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPatterns(
+                    patternsFor('architecture'),
+                    'No architecture patterns detected yet.',
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Implementation Patterns</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPatterns(
+                    patternsFor('implementation'),
+                    'No implementation patterns detected yet.',
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Code Quality</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPatterns(
+                    patternsFor('quality'),
+                    'No code quality findings detected yet.',
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Rules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {renderPatterns(
+                    patternsFor('ai_rule'),
+                    'No AI/agent-specific rules detected yet.',
+                  )}
+                </CardContent>
+              </Card>
+
+              {otherPatterns.length ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Other Patterns</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {renderPatterns(otherPatterns, 'No other patterns detected.')}
+                  </CardContent>
+                </Card>
+              ) : null}
+
+              {result.insights?.length ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Insights</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid gap-3">
+                    {result.insights.map((i: any, idx: number) => (
+                      <div
+                        key={`${i.title}:${idx}`}
+                        className="rounded-md border border-border/60 bg-card/40 p-3"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-sm font-medium">{i.title}</div>
+                          {i.category ? (
+                            <Badge variant="secondary" className="font-mono">
+                              {String(i.category).toUpperCase()}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          {i.description}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
             </>
           ) : null}
         </div>

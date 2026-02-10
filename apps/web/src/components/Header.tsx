@@ -1,9 +1,43 @@
 import { Link } from '@tanstack/react-router'
 import { Terminal } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 
 export default function Header() {
+  const headerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const el = headerRef.current
+    if (!el) return
+
+    const setVar = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height || 0)
+      if (h > 0) {
+        document.documentElement.style.setProperty('--app-header-h', `${h}px`)
+      }
+    }
+
+    setVar()
+
+    let ro: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => setVar())
+      ro.observe(el)
+    } else {
+      window.addEventListener('resize', setVar)
+    }
+
+    return () => {
+      if (ro) ro.disconnect()
+      window.removeEventListener('resize', setVar)
+    }
+  }, [])
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-cyan-500/10 bg-[#0a0f1a]/80 backdrop-blur-md">
+    <header
+      ref={headerRef}
+      className="fixed top-0 left-0 right-0 z-50 border-b border-cyan-500/10 bg-[#0a0f1a]/80 backdrop-blur-md"
+    >
       <div className="container flex h-14 items-center justify-between">
         <Link 
           to="/" 

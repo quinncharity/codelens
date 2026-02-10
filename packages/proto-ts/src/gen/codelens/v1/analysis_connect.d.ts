@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, GetAnalysisRequest, GetAnalysisResponse } from "./analysis_pb.js";
+import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, GetAnalysisRequest, GetAnalysisResponse, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -45,6 +45,18 @@ export declare const AnalysisService: {
       readonly name: "GetAnalysis",
       readonly I: typeof GetAnalysisRequest,
       readonly O: typeof GetAnalysisResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * List distinct repositories that have been analyzed (grouped by git_url + ref),
+     * returning the latest analysis per repo/ref.
+     *
+     * @generated from rpc codelens.v1.AnalysisService.ListRepos
+     */
+    readonly listRepos: {
+      readonly name: "ListRepos",
+      readonly I: typeof ListReposRequest,
+      readonly O: typeof ListReposResponse,
       readonly kind: MethodKind.Unary,
     },
   }

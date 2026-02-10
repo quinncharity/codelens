@@ -21,6 +21,14 @@ _ALLOWED_FRAMEWORK_CATEGORIES = {
     "unknown",
 }
 
+_ALLOWED_PATTERN_CATEGORIES = {
+    "architecture",
+    "implementation",
+    "quality",
+    "ai_rule",
+    "unknown",
+}
+
 
 def _clamp01(x: float) -> float:
     if x < 0.0:
@@ -102,7 +110,7 @@ def _normalize_evidence_paths(v: Any) -> list[str]:
         if len(p) >= 2 and p[1] == ":":
             continue
         out.append(p)
-        if len(out) >= 50:
+        if len(out) >= 8:
             break
     return out
 
@@ -145,6 +153,9 @@ def parse_analysis_result(
         name = _as_str(item.get("name")).strip()
         if not name:
             continue
+        category = _as_str(item.get("category")).strip().lower() or "unknown"
+        if category not in _ALLOWED_PATTERN_CATEGORIES:
+            category = "unknown"
         description = _as_str(item.get("description")).strip()
         evidence_paths = _normalize_evidence_paths(item.get("evidence_paths"))
 
@@ -157,6 +168,7 @@ def parse_analysis_result(
         patterns.append(
             Pattern(
                 name=name,
+                category=category,
                 description=description,
                 evidence_paths=evidence_paths,
                 confidence=conf,

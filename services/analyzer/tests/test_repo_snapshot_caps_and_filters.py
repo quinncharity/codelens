@@ -11,6 +11,7 @@ def test_repo_snapshot_caps_and_filters(tmp_path: Path) -> None:
     repo.mkdir()
 
     (repo / "package.json").write_text('{"name":"x","dependencies":{"react":"^18.0.0"}}', encoding="utf-8")
+    (repo / "AGENTS.md").write_text("# Agent instructions\nFollow these rules.\n", encoding="utf-8")
     (repo / ".env").write_text("SECRET_KEY=supersecret\n", encoding="utf-8")
     (repo / ".env.example").write_text("PUBLIC_FLAG=1\n", encoding="utf-8")
 
@@ -38,4 +39,4 @@ def test_repo_snapshot_caps_and_filters(tmp_path: Path) -> None:
     manifest_paths = {m.get("path") for m in manifests if isinstance(m, dict)}
     assert ".env" not in manifest_paths
     assert ".env.example" in manifest_paths
-
+    assert "AGENTS.md" in manifest_paths

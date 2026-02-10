@@ -15,6 +15,7 @@ class Framework:
 @dataclass(frozen=True)
 class Pattern:
     name: str
+    category: str = ""
     description: str = ""
     evidence_paths: list[str] = field(default_factory=list)
     confidence: float = 0.0
@@ -48,4 +49,3 @@ class AnalysisResultData:
             patterns=patterns,
             insights=insights,
         )
-

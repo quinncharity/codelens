@@ -78,6 +78,7 @@ class AnalysisServiceImpl(AnalysisService):
             patterns=[
                 analysis_pb2.Pattern(
                     name=p.name,
+                    category=p.category,
                     description=p.description,
                     evidence_paths=list(p.evidence_paths),
                     confidence=float(p.confidence),
@@ -94,4 +95,29 @@ class AnalysisServiceImpl(AnalysisService):
             ],
             status=rec.status,
             error=rec.error,
+        )
+
+    async def list_repos(
+        self, request: analysis_pb2.ListReposRequest, ctx: RequestContext
+    ) -> analysis_pb2.ListReposResponse:
+        limit = int(request.limit or 0)
+        offset = int(request.offset or 0)
+
+        if limit <= 0:
+            limit = 25
+        limit = min(max(1, limit), 200)
+        offset = max(0, offset)
+
+        rows = await self._store.list_repos(limit=limit, offset=offset)
+        return analysis_pb2.ListReposResponse(
+            repos=[
+                analysis_pb2.RepoSummary(
+                    git_url=r.git_url,
+                    ref=r.ref,
+                    last_analysis_id=r.last_analysis_id,
+                    last_status=r.last_status,
+                    last_updated_at=r.last_updated_at,
+                )
+                for r in rows
+            ]
         )

@@ -25,6 +25,9 @@ class AnalysisService(Protocol):
     async def get_analysis(self, request: codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def list_repos(self, request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
     def __init__(self, service: AnalysisService | AsyncGenerator[AnalysisService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -60,6 +63,16 @@ class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_analysis,
+                ),
+                "/codelens.v1.AnalysisService/ListRepos": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListRepos",
+                        service_name="codelens.v1.AnalysisService",
+                        input=codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
+                        output=codelens_dot_v1_dot_analysis__pb2.ListReposResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_repos,
                 ),
             },
             interceptors=interceptors,
@@ -133,6 +146,26 @@ class AnalysisServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def list_repos(
+        self,
+        request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListRepos",
+                service_name="codelens.v1.AnalysisService",
+                input=codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
+                output=codelens_dot_v1_dot_analysis__pb2.ListReposResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class AnalysisServiceSync(Protocol):
     def analyze(self, request: codelens_dot_v1_dot_analysis__pb2.AnalyzeRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.AnalyzeResponse:
@@ -140,6 +173,8 @@ class AnalysisServiceSync(Protocol):
     def analyze_stream(self, request: codelens_dot_v1_dot_analysis__pb2.AnalyzeStreamRequest, ctx: RequestContext) -> Iterator[codelens_dot_v1_dot_analysis__pb2.AnalyzeStreamResponse]:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_analysis(self, request: codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def list_repos(self, request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -176,6 +211,16 @@ class AnalysisServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_analysis,
+                ),
+                "/codelens.v1.AnalysisService/ListRepos": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListRepos",
+                        service_name="codelens.v1.AnalysisService",
+                        input=codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
+                        output=codelens_dot_v1_dot_analysis__pb2.ListReposResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_repos,
                 ),
             },
             interceptors=interceptors,
@@ -243,6 +288,26 @@ class AnalysisServiceClientSync(ConnectClientSync):
                 service_name="codelens.v1.AnalysisService",
                 input=codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest,
                 output=codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def list_repos(
+        self,
+        request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListRepos",
+                service_name="codelens.v1.AnalysisService",
+                input=codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
+                output=codelens_dot_v1_dot_analysis__pb2.ListReposResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

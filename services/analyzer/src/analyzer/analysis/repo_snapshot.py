@@ -67,6 +67,20 @@ _MANIFEST_BASENAMES = {
     ".env.sample",
     ".env.template",
     ".gitignore",
+    ".editorconfig",
+    # Docs (architecture/usage signals)
+    "readme.md",
+    "readme.mdx",
+    "architecture.md",
+    "design.md",
+    "decisions.md",
+    # Agent / AI instruction files
+    "agents.md",
+    "claude.md",
+    "gemini.md",
+    ".cursorrules",
+    ".windsurfrules",
+    "copilot-instructions.md",
 }
 
 _MANIFEST_NAME_PREFIXES = [
@@ -245,6 +259,14 @@ def build_repo_snapshot(
 
         # CI workflows can provide important build hints.
         if rp.lower().startswith(".github/workflows/") and name.lower().endswith((".yml", ".yaml")):
+            manifest_candidates.append(rp)
+
+        # AI/agent instructions can significantly affect how code should be read/modified.
+        if rp.lower() == ".github/copilot-instructions.md":
+            manifest_candidates.append(rp)
+        if rp.lower().startswith(".github/instructions/") and name.lower().endswith((".md", ".txt")):
+            manifest_candidates.append(rp)
+        if rp.lower().startswith(".cursor/") and name.lower().endswith((".md", ".txt", ".json", ".yml", ".yaml")):
             manifest_candidates.append(rp)
 
     # De-dupe, keep shallow paths first.

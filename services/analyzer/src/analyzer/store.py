@@ -25,6 +25,15 @@ class AnalysisRecord:
     error: str
 
 
+@dataclass(frozen=True)
+class RepoSummaryRecord:
+    git_url: str
+    ref: str
+    last_analysis_id: str
+    last_status: str  # RUNNING | SUCCEEDED | FAILED
+    last_updated_at: str  # ISO8601 UTC timestamp
+
+
 class SQLiteStore:
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
@@ -47,6 +56,19 @@ class SQLiteStore:
                       result_json TEXT,
                       error TEXT
                     )
+                    """
+                )
+                # Demo app: keep this fast enough for repeated refreshes even as the DB grows.
+                conn.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_analyses_repo_updated
+                    ON analyses (git_url, ref, updated_at)
+                    """
+                )
+                conn.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_analyses_updated
+                    ON analyses (updated_at)
                     """
                 )
                 conn.commit()
@@ -147,3 +169,42 @@ class SQLiteStore:
             error=str(data["error"]),
         )
 
+    async def list_repos(self, *, limit: int, offset: int) -> list[RepoSummaryRecord]:
+        def _list() -> list[RepoSummaryRecord]:
+            with sqlite3.connect(self._db_path) as conn:
+                cur = conn.execute(
+                    """
+                    SELECT git_url, ref, id, status, updated_at
+                    FROM (
+                      SELECT
+                        id,
+                        git_url,
+                        ref,
+                        status,
+                        updated_at,
+                        created_at,
+                        ROW_NUMBER() OVER (
+                          PARTITION BY git_url, ref
+                          ORDER BY updated_at DESC, created_at DESC, id DESC
+                        ) AS rn
+                      FROM analyses
+                    )
+                    WHERE rn = 1
+                    ORDER BY updated_at DESC, git_url ASC, ref ASC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (int(limit), int(offset)),
+                )
+                rows = cur.fetchall()
+                return [
+                    RepoSummaryRecord(
+                        git_url=str(r[0]),
+                        ref=str(r[1]),
+                        last_analysis_id=str(r[2]),
+                        last_status=str(r[3]),
+                        last_updated_at=str(r[4]),
+                    )
+                    for r in rows
+                ]
+
+        return await asyncio.to_thread(_list)

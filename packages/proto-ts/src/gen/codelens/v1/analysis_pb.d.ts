@@ -226,6 +226,109 @@ export declare class GetAnalysisResponse extends Message<GetAnalysisResponse> {
 }
 
 /**
+ * @generated from message codelens.v1.ListReposRequest
+ */
+export declare class ListReposRequest extends Message<ListReposRequest> {
+  /**
+   * Optional pagination. Server may clamp values for safety.
+   *
+   * @generated from field: int32 limit = 1;
+   */
+  limit: number;
+
+  /**
+   * @generated from field: int32 offset = 2;
+   */
+  offset: number;
+
+  constructor(data?: PartialMessage<ListReposRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.ListReposRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListReposRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListReposRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListReposRequest;
+
+  static equals(a: ListReposRequest | PlainMessage<ListReposRequest> | undefined, b: ListReposRequest | PlainMessage<ListReposRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message codelens.v1.ListReposResponse
+ */
+export declare class ListReposResponse extends Message<ListReposResponse> {
+  /**
+   * @generated from field: repeated codelens.v1.RepoSummary repos = 1;
+   */
+  repos: RepoSummary[];
+
+  constructor(data?: PartialMessage<ListReposResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.ListReposResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListReposResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListReposResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListReposResponse;
+
+  static equals(a: ListReposResponse | PlainMessage<ListReposResponse> | undefined, b: ListReposResponse | PlainMessage<ListReposResponse> | undefined): boolean;
+}
+
+/**
+ * @generated from message codelens.v1.RepoSummary
+ */
+export declare class RepoSummary extends Message<RepoSummary> {
+  /**
+   * @generated from field: string git_url = 1;
+   */
+  gitUrl: string;
+
+  /**
+   * @generated from field: string ref = 2;
+   */
+  ref: string;
+
+  /**
+   * @generated from field: string last_analysis_id = 3;
+   */
+  lastAnalysisId: string;
+
+  /**
+   * RUNNING, SUCCEEDED, FAILED
+   *
+   * @generated from field: string last_status = 4;
+   */
+  lastStatus: string;
+
+  /**
+   * ISO8601 UTC timestamp
+   *
+   * @generated from field: string last_updated_at = 5;
+   */
+  lastUpdatedAt: string;
+
+  constructor(data?: PartialMessage<RepoSummary>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.RepoSummary";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RepoSummary;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RepoSummary;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RepoSummary;
+
+  static equals(a: RepoSummary | PlainMessage<RepoSummary> | undefined, b: RepoSummary | PlainMessage<RepoSummary> | undefined): boolean;
+}
+
+/**
  * @generated from message codelens.v1.Framework
  */
 export declare class Framework extends Message<Framework> {
@@ -289,6 +392,14 @@ export declare class Pattern extends Message<Pattern> {
    * @generated from field: float confidence = 4;
    */
   confidence: number;
+
+  /**
+   * Category for grouping in the UI.
+   * Allowed: architecture, implementation, quality, ai_rule, unknown.
+   *
+   * @generated from field: string category = 5;
+   */
+  category: string;
 
   constructor(data?: PartialMessage<Pattern>);
 

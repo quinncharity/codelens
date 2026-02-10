@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { Loader2, Terminal, GitBranch, Sparkles } from 'lucide-react'
 
 import { analysisClient } from '../lib/rpc'
@@ -18,7 +18,54 @@ function Home() {
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
-  const start = async () => {
+  const [savedRepos, setSavedRepos] = useState<any[]>([])
+  const [savedLoading, setSavedLoading] = useState(false)
+  const [savedError, setSavedError] = useState<string | null>(null)
+
+  const loadSaved = async () => {
+    setSavedError(null)
+    setSavedLoading(true)
+    try {
+      const r = await analysisClient.listRepos({ limit: 25, offset: 0 })
+      setSavedRepos(r.repos ?? [])
+    } catch (e: any) {
+      setSavedError(e?.message ?? String(e))
+    } finally {
+      setSavedLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadSaved()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const statusPill = (status: string) => {
+    const base =
+      'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border'
+    if (status === 'SUCCEEDED') {
+      return `${base} border-emerald-400/30 text-emerald-300 bg-emerald-500/10`
+    }
+    if (status === 'FAILED') {
+      return `${base} border-red-400/30 text-red-300 bg-red-500/10`
+    }
+    if (status === 'RUNNING') {
+      return `${base} border-cyan-400/30 text-cyan-200 bg-cyan-500/10`
+    }
+    return `${base} border-white/10 text-muted-foreground bg-white/5`
+  }
+
+  const formatUpdatedAt = (iso: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleString()
+  }
+
+  const start = async (opts?: { gitUrlOverride?: string; refOverride?: string }) => {
+    const url = (opts?.gitUrlOverride ?? gitUrl).trim()
+    const rref = (opts?.refOverride ?? ref).trim()
+
     setError(null)
     setRunning(true)
     setAnalysisId(null)
@@ -28,8 +75,8 @@ function Home() {
 
     try {
       for await (const ev of analysisClient.analyzeStream({
-        gitUrl: gitUrl.trim(),
-        ref: ref.trim(),
+        gitUrl: url,
+        ref: rref,
       })) {
         if (ev.id) setAnalysisId(ev.id)
         setPhase(ev.phase)
@@ -54,7 +101,7 @@ function Home() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col items-center justify-center px-4 py-12 pt-20">
+    <div className="min-h-[calc(100dvh-var(--app-header-h))] flex flex-col items-center px-4 py-12">
       <div className="w-full max-w-xl animate-fade-in-up">
         {/* Hero Title */}
         <div className="text-center mb-12">
@@ -226,6 +273,103 @@ function Home() {
             </div>
           </div>
         )}
+
+        {/* Saved repos */}
+        <div className="mt-10 animate-fade-in-up">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-mono tracking-wider uppercase text-cyan-400/80">
+              Saved repos
+            </h2>
+            <button
+              type="button"
+              onClick={() => void loadSaved()}
+              disabled={savedLoading}
+              className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
+                hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {savedLoading ? 'REFRESHING…' : 'REFRESH'}
+            </button>
+          </div>
+
+          {savedError ? (
+            <div className="mb-3 bg-red-950/30 border border-red-500/30 rounded-lg p-3 font-mono">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-400" />
+                <span className="text-red-400 text-xs font-medium uppercase tracking-wider">
+                  Failed to load saved repos
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-red-300/80 break-words">{savedError}</p>
+            </div>
+          ) : null}
+
+          <div className="bg-black/40 border border-cyan-500/20 rounded-lg overflow-hidden">
+            {savedRepos?.length ? (
+              <div className="divide-y divide-cyan-500/10">
+                {savedRepos.map((r: any) => (
+                  <div
+                    key={r.lastAnalysisId}
+                    className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between hover:bg-cyan-500/5 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="font-mono text-sm text-foreground truncate"
+                          title={r.gitUrl}
+                        >
+                          {r.gitUrl}
+                        </span>
+                        <span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border border-cyan-500/20 text-cyan-300/80 bg-cyan-500/5">
+                          {r.ref ? `ref:${r.ref}` : 'ref:(default)'}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className={statusPill(r.lastStatus)}>
+                          {r.lastStatus || 'UNKNOWN'}
+                        </span>
+                        <span className="font-mono text-[11px] text-muted-foreground/70">
+                          UPDATED {formatUpdatedAt(r.lastUpdatedAt)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Link
+                        to="/analysis/$id"
+                        params={{ id: r.lastAnalysisId }}
+                        className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
+                          hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors"
+                      >
+                        OPEN
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGitUrl(r.gitUrl ?? '')
+                          setRef(r.ref ?? '')
+                          void start({ gitUrlOverride: r.gitUrl, refOverride: r.ref })
+                        }}
+                        disabled={running}
+                        className="rounded-md border border-cyan-500/20 bg-black/30 px-3 py-1.5 font-mono text-xs text-cyan-300/90
+                          hover:bg-black/40 hover:border-cyan-400/40 transition-colors
+                          disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        RE-ANALYZE
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-6">
+                <p className="font-mono text-xs text-muted-foreground/70">
+                  No saved repos yet. Run an analysis to populate this list.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Footer hint */}

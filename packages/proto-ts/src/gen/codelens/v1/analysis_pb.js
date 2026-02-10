@@ -79,6 +79,41 @@ export const GetAnalysisResponse = /*@__PURE__*/ proto3.makeMessageType(
 );
 
 /**
+ * @generated from message codelens.v1.ListReposRequest
+ */
+export const ListReposRequest = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.ListReposRequest",
+  () => [
+    { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ],
+);
+
+/**
+ * @generated from message codelens.v1.ListReposResponse
+ */
+export const ListReposResponse = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.ListReposResponse",
+  () => [
+    { no: 1, name: "repos", kind: "message", T: RepoSummary, repeated: true },
+  ],
+);
+
+/**
+ * @generated from message codelens.v1.RepoSummary
+ */
+export const RepoSummary = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.RepoSummary",
+  () => [
+    { no: 1, name: "git_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "ref", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "last_analysis_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "last_status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "last_updated_at", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
  * @generated from message codelens.v1.Framework
  */
 export const Framework = /*@__PURE__*/ proto3.makeMessageType(
@@ -101,6 +136,7 @@ export const Pattern = /*@__PURE__*/ proto3.makeMessageType(
     { no: 2, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "evidence_paths", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "confidence", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
+    { no: 5, name: "category", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ],
 );
 
