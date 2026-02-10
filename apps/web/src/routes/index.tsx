@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { Loader2, Terminal, GitBranch, Sparkles, Trash2, Zap, Cpu, Globe } from 'lucide-react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { Loader2, Terminal, GitBranch, Sparkles, Trash2, Zap, Cpu, Globe, FileText, Layers, Lightbulb, Search } from 'lucide-react'
 
+import { cn } from '../lib/utils'
 import { analysisClient } from '../lib/rpc'
 
 interface ExampleRepo {
@@ -22,17 +23,57 @@ interface StreamEvent {
   stepTotal?: number
 }
 
+interface AgentState {
+  name: string
+  displayName: string
+  status: 'pending' | 'running' | 'completed' | 'error'
+  progress: number
+  message: string
+  events: StreamEvent[]
+}
+
+const AGENT_ORDER = ['summary', 'frameworks', 'patterns', 'insights'] as const
+const AGENT_NAMES = new Set<string>(AGENT_ORDER)
+
+const AGENT_DISPLAY: Record<string, { displayName: string; icon: ReactNode }> = {
+  summary: { displayName: 'Summary', icon: <FileText className="w-3.5 h-3.5" /> },
+  frameworks: { displayName: 'Frameworks', icon: <Layers className="w-3.5 h-3.5" /> },
+  patterns: { displayName: 'Patterns', icon: <Search className="w-3.5 h-3.5" /> },
+  insights: { displayName: 'Insights', icon: <Lightbulb className="w-3.5 h-3.5" /> },
+}
+
+const AGENT_WEIGHTS: Record<string, number> = {
+  summary: 10,
+  frameworks: 20,
+  patterns: 30,
+  insights: 15,
+}
+const TOTAL_WEIGHT = Object.values(AGENT_WEIGHTS).reduce((a, b) => a + b, 0)
+
+function makeInitialAgents(): Record<string, AgentState> {
+  return Object.fromEntries(
+    AGENT_ORDER.map(name => [name, {
+      name,
+      displayName: AGENT_DISPLAY[name].displayName,
+      status: 'pending' as const,
+      progress: 0,
+      message: 'Waiting\u2026',
+      events: [],
+    }])
+  )
+}
+
 const exampleRepos: ExampleRepo[] = [
   // Frameworks & Libraries
   { name: 'facebook/react', description: 'A declarative, efficient, and flexible JavaScript library for building user interfaces.', url: 'https://github.com/facebook/react', category: 'Frameworks' },
   { name: 'vercel/next.js', description: 'The React Framework for the Web. Used by some of the world\'s largest companies.', url: 'https://github.com/vercel/next.js', category: 'Frameworks' },
   { name: 'shadcn-ui/ui', description: 'Beautifully designed components that you can copy and paste into your apps.', url: 'https://github.com/shadcn-ui/ui', category: 'Frameworks' },
-  
+
   // AI & Machine Learning
   { name: 'langchain-ai/langchain', description: 'Building applications with LLMs through composability.', url: 'https://github.com/langchain-ai/langchain', category: 'AI & ML' },
   { name: 'microsoft/generative-ai-for-beginners', description: '21 Lessons, Get Started Building with Generative AI.', url: 'https://github.com/microsoft/generative-ai-for-beginners', category: 'AI & ML' },
   { name: 'anthropics/anthropic-cookbook', description: 'A collection of recipes showcasing how to build with Claude.', url: 'https://github.com/anthropics/anthropic-cookbook', category: 'AI & ML' },
-  
+
   // Developer Tools
   { name: 'microsoft/vscode', description: 'Visual Studio Code is a code editor redefined and optimized for building modern web and cloud applications.', url: 'https://github.com/microsoft/vscode', category: 'Developer Tools' },
   { name: 'kubernetes/kubernetes', description: 'Production-Grade Container Scheduling and Management.', url: 'https://github.com/kubernetes/kubernetes', category: 'Developer Tools' },
@@ -59,7 +100,7 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
         <Sparkles className="w-4 h-4" />
         Try an Example
       </h2>
-      
+
       {Object.entries(grouped).map(([category, repos], groupIdx) => (
         <div key={category} className="mb-6 last:mb-0">
           <div className="flex items-center gap-2 mb-3">
@@ -67,14 +108,14 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
             <h3 className="text-xs font-mono uppercase tracking-wider text-cyan-400/60">{category}</h3>
             <div className="flex-1 h-px bg-cyan-500/10" />
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {repos.map((repo, idx) => (
               <button
                 key={repo.name}
                 onClick={() => onSelect(repo)}
                 disabled={running}
-                className="group relative text-left bg-black/40 border border-cyan-500/20 rounded-lg p-4 
+                className="group relative text-left bg-black/40 border border-cyan-500/20 rounded-lg p-4
                   hover:border-cyan-400/40 hover:bg-cyan-500/5
                   transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
                   animate-fade-in-up"
@@ -85,7 +126,7 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
                   <div className="absolute inset-0 rounded-lg bg-cyan-500/5" />
                   <div className="absolute inset-0 rounded-lg shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]" />
                 </div>
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
                     <GitBranch className="w-3.5 h-3.5 text-cyan-400/60 group-hover:text-cyan-400 transition-colors" />
@@ -97,10 +138,10 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
                     {repo.description}
                   </p>
                 </div>
-                
+
                 {/* Arrow indicator */}
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-1 group-hover:translate-x-0">
-                  <span className="text-cyan-400/60 text-xs font-mono">→</span>
+                  <span className="text-cyan-400/60 text-xs font-mono">&rarr;</span>
                 </div>
               </button>
             ))}
@@ -111,6 +152,82 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
   )
 }
 
+/* ---------- Per-agent streaming card ---------- */
+
+function AgentCard({ agent }: { agent: AgentState }) {
+  const logEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [agent.events.length])
+
+  const statusDot = {
+    pending: 'bg-white/20',
+    running: 'bg-cyan-400 animate-pulse',
+    completed: 'bg-emerald-400',
+    error: 'bg-red-400',
+  }[agent.status]
+
+  const barColor = {
+    pending: 'bg-white/10',
+    running: 'bg-cyan-400',
+    completed: 'bg-emerald-400',
+    error: 'bg-red-400',
+  }[agent.status]
+
+  const icon = AGENT_DISPLAY[agent.name]?.icon
+
+  return (
+    <div className="bg-black/40 border border-cyan-500/20 rounded-lg p-4 font-mono">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2">
+          <div className={cn('w-2 h-2 rounded-full shrink-0', statusDot)} />
+          <span className="text-cyan-400/70">{icon}</span>
+          <span className="text-xs font-medium text-cyan-400 uppercase tracking-wider">
+            {agent.displayName}
+          </span>
+        </div>
+        <span className="text-[11px] text-cyan-400/50 tabular-nums">
+          {Math.round(agent.progress * 100)}%
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="relative h-1 bg-cyan-500/10 rounded-full overflow-hidden mb-2.5">
+        <div
+          className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-500', barColor)}
+          style={{ width: `${Math.max(0, Math.min(100, agent.progress * 100))}%` }}
+        />
+        {agent.status === 'running' && (
+          <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent animate-scan" />
+        )}
+      </div>
+
+      {/* Message */}
+      <p className="text-[11px] text-muted-foreground truncate mb-2">
+        <span className="text-cyan-400/50">&gt;</span> {agent.message}
+      </p>
+
+      {/* Mini event log */}
+      {agent.events.length > 0 && (
+        <div className="max-h-16 overflow-auto rounded border border-cyan-500/10 bg-black/30 px-2 py-1">
+          <div className="space-y-0.5 text-[10px] leading-relaxed text-muted-foreground/60">
+            {agent.events.slice(-6).map((e, idx) => (
+              <div key={`${e.ts}:${idx}`} className="truncate">
+                {e.message || '\u2014'}
+              </div>
+            ))}
+            <div ref={logEndRef} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ---------- Home page ---------- */
+
 function Home() {
   const navigate = useNavigate()
 
@@ -119,10 +236,10 @@ function Home() {
   const [running, setRunning] = useState(false)
   const [analysisId, setAnalysisId] = useState<string | null>(null)
   const [phase, setPhase] = useState<string>('')
-  const [progress, setProgress] = useState<number>(0)
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [events, setEvents] = useState<StreamEvent[]>([])
+  const [agents, setAgents] = useState<Record<string, AgentState>>(makeInitialAgents)
 
   const logEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -135,6 +252,27 @@ function Home() {
   const [repoToDelete, setRepoToDelete] = useState<{ gitUrl: string; ref: string } | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Compute overall progress as weighted average of agent progress
+  const overallProgress = useMemo(() => {
+    // Before ANALYZE phase, use engine-level progress
+    if (phase !== 'ANALYZE') {
+      if (phase === 'CLONE') return 0.05
+      if (phase === 'INDEX') return 0.15
+      if (phase === 'STORE') return 0.95
+      if (phase === 'DONE') return 1.0
+      return 0
+    }
+    let weighted = 0
+    for (const name of AGENT_ORDER) {
+      const w = AGENT_WEIGHTS[name] ?? 0
+      const p = agents[name]?.progress ?? 0
+      weighted += p * w
+    }
+    // Map agent progress (0-1) into the ANALYZE range (0.25-0.90)
+    const agentFrac = weighted / TOTAL_WEIGHT
+    return 0.25 + agentFrac * 0.65
+  }, [phase, agents])
 
   const loadSaved = async () => {
     setSavedError(null)
@@ -191,7 +329,7 @@ function Home() {
     const base =
       'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border'
     const k = String(kind || '').toUpperCase()
-    if (k === 'ERROR') return `${base} border-red-400/30 text-red-300 bg-red-500/10`
+    if (k === 'ERROR' || k === 'AGENT_ERROR') return `${base} border-red-400/30 text-red-300 bg-red-500/10`
     if (k === 'WARN') return `${base} border-amber-400/30 text-amber-300 bg-amber-500/10`
     if (k.startsWith('LM_')) return `${base} border-cyan-400/20 text-cyan-200 bg-cyan-500/10`
     if (k.startsWith('TOOL_')) return `${base} border-cyan-400/15 text-cyan-200/90 bg-black/30`
@@ -239,9 +377,9 @@ function Home() {
     setRunning(true)
     setAnalysisId(null)
     setPhase('START')
-    setProgress(0)
-    setMessage('Initializing analysis sequence...')
+    setMessage('Initializing analysis\u2026')
     setEvents([])
+    setAgents(makeInitialAgents())
 
     try {
       for await (const ev of analysisClient.analyzeStream({
@@ -250,8 +388,54 @@ function Home() {
       })) {
         if (ev.id) setAnalysisId(ev.id)
         setPhase(ev.phase)
-        setProgress(ev.progress ?? 0)
-        setMessage(ev.message ?? '')
+
+        const agentName = (ev.agent ?? '').trim()
+        const kind = (ev.kind ?? '').trim()
+
+        // Route engine events to top-level message
+        if (agentName === 'engine' || !agentName) {
+          setMessage(ev.message ?? '')
+        }
+
+        // Route per-agent events to agent state
+        if (AGENT_NAMES.has(agentName)) {
+          setAgents(prev => {
+            const cur = prev[agentName]
+            if (!cur) return prev
+
+            const newEvent: StreamEvent = {
+              ts: Date.now(),
+              phase: ev.phase ?? '',
+              progress: ev.progress ?? 0,
+              message: ev.message ?? '',
+              agent: agentName,
+              kind,
+              step: ev.step ?? 0,
+              stepTotal: ev.stepTotal ?? 0,
+            }
+
+            let status = cur.status
+            if (kind === 'AGENT_START') status = 'running'
+            else if (kind === 'AGENT_END') status = 'completed'
+            else if (kind === 'AGENT_ERROR') status = 'error'
+
+            const events = [...cur.events, newEvent]
+            if (events.length > 50) events.splice(0, events.length - 50)
+
+            return {
+              ...prev,
+              [agentName]: {
+                ...cur,
+                status,
+                progress: ev.progress ?? cur.progress,
+                message: ev.message ?? cur.message,
+                events,
+              },
+            }
+          })
+        }
+
+        // Raw event log
         setEvents((prev) => {
           const next = [
             ...prev,
@@ -260,8 +444,8 @@ function Home() {
               phase: ev.phase ?? '',
               progress: ev.progress ?? 0,
               message: ev.message ?? '',
-              agent: ev.agent ?? '',
-              kind: ev.kind ?? '',
+              agent: agentName,
+              kind,
               step: ev.step ?? 0,
               stepTotal: ev.stepTotal ?? 0,
             },
@@ -287,9 +471,11 @@ function Home() {
     }
   }
 
+  const showAgentCards = running && (phase === 'ANALYZE' || AGENT_ORDER.some(n => agents[n]?.status !== 'pending'))
+
   return (
     <div className="min-h-[calc(100dvh-var(--app-header-h))] flex flex-col items-center px-4 py-12">
-      <div className="w-full max-w-xl animate-fade-in-up">
+      <div className={cn('w-full animate-fade-in-up', running ? 'max-w-3xl' : 'max-w-xl')}>
         {/* Hero Title */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-4">
@@ -309,7 +495,7 @@ function Home() {
             e.preventDefault()
             void start()
           }}
-          className="space-y-6"
+          className="space-y-6 max-w-xl mx-auto"
         >
           {/* Git URL Input */}
           <div className="group">
@@ -328,7 +514,7 @@ function Home() {
                 disabled={running}
                 autoComplete="off"
                 spellCheck={false}
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-4 
+                className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-4
                   text-foreground placeholder:text-muted-foreground/50
                   focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30
                   transition-all duration-300 font-mono text-sm
@@ -372,7 +558,7 @@ function Home() {
           <button
             type="submit"
             disabled={running || !gitUrl.trim()}
-            className="w-full group relative overflow-hidden rounded-lg bg-cyan-500/10 
+            className="w-full group relative overflow-hidden rounded-lg bg-cyan-500/10
               border border-cyan-500/30 hover:border-cyan-400/50
               px-6 py-4 font-mono text-sm font-medium text-cyan-400
               transition-all duration-300
@@ -394,7 +580,7 @@ function Home() {
               )}
             </span>
             {!running && (
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0 
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0
                 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
             )}
           </button>
@@ -402,8 +588,8 @@ function Home() {
 
         {/* Example Repos */}
         {!running && (
-          <div className="mt-10">
-            <ExampleRepos 
+          <div className="mt-10 max-w-xl mx-auto">
+            <ExampleRepos
               onSelect={(repo) => {
                 setGitUrl(repo.url)
                 setRef('')
@@ -417,51 +603,49 @@ function Home() {
         {/* Analysis Progress */}
         {running && (
           <div className="mt-8 animate-fade-in-up">
-            <div className="bg-black/40 border border-cyan-500/20 rounded-lg p-6 font-mono">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs text-cyan-400/60 uppercase tracking-wider">Status</span>
-                <span className="text-xs text-cyan-400/60 uppercase tracking-wider">
-                  {Math.round(progress * 100)}%
+            {/* Overall Status Bar */}
+            <div className="bg-black/40 border border-cyan-500/20 rounded-lg p-4 font-mono mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-cyan-400 font-medium text-sm">
+                    {phase || 'INITIALIZING'}
+                  </span>
+                </div>
+                <span className="text-xs text-cyan-400/60 tabular-nums">
+                  {Math.round(overallProgress * 100)}%
                 </span>
               </div>
-              
-              {/* Phase */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span className="text-cyan-400 font-medium text-sm">
-                  {phase || 'INITIALIZING'}
-                </span>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="relative h-1 bg-cyan-500/10 rounded-full overflow-hidden mb-4">
-                <div 
+              <div className="relative h-1 bg-cyan-500/10 rounded-full overflow-hidden">
+                <div
                   className="absolute inset-y-0 left-0 bg-cyan-400 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.max(0, Math.min(100, progress * 100))}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, overallProgress * 100))}%` }}
                 />
                 <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent animate-scan" />
               </div>
-              
-              {/* Message */}
-              {message && (
-                <p className="text-sm text-muted-foreground">
+              {message && phase !== 'ANALYZE' && (
+                <p className="mt-2 text-sm text-muted-foreground">
                   <span className="text-cyan-400/60">&gt;</span> {message}
                 </p>
               )}
+            </div>
 
-              {/* Live Log */}
-              {events.length ? (
-                <div className="mt-4 pt-4 border-t border-cyan-500/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-cyan-400/60 uppercase tracking-wider">
-                      Live log
-                    </span>
-                    <span className="text-[11px] font-mono text-cyan-400/40">
-                      {events.length}/200
-                    </span>
-                  </div>
+            {/* Per-Agent Cards (2x2 grid) */}
+            {showAgentCards && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                {AGENT_ORDER.map(name => (
+                  <AgentCard key={name} agent={agents[name]} />
+                ))}
+              </div>
+            )}
 
+            {/* Collapsible Raw Log */}
+            {events.length > 0 && (
+              <details className="bg-black/40 border border-cyan-500/10 rounded-lg">
+                <summary className="px-4 py-2 text-xs text-cyan-400/40 font-mono cursor-pointer hover:text-cyan-400/60 transition-colors select-none">
+                  Raw log ({events.length}/200)
+                </summary>
+                <div className="px-3 pb-3">
                   <div className="max-h-52 overflow-auto rounded-md border border-cyan-500/10 bg-black/30 px-3 py-2">
                     <div className="space-y-1 font-mono text-[11px] leading-relaxed">
                       {events.map((e, idx) => {
@@ -497,7 +681,7 @@ function Home() {
                               </span>
                             ) : null}
                             <span className="text-muted-foreground break-words">
-                              {e.message || '—'}
+                              {e.message || '\u2014'}
                             </span>
                           </div>
                         )
@@ -506,17 +690,17 @@ function Home() {
                     </div>
                   </div>
                 </div>
-              ) : null}
-              
-              {/* Analysis ID */}
-              {analysisId && (
-                <div className="mt-4 pt-4 border-t border-cyan-500/10">
-                  <span className="text-xs text-muted-foreground">
-                    ID: <span className="text-cyan-400/80 font-mono">{analysisId}</span>
-                  </span>
-                </div>
-              )}
-            </div>
+              </details>
+            )}
+
+            {/* Analysis ID */}
+            {analysisId && (
+              <div className="mt-3">
+                <span className="text-xs text-muted-foreground font-mono">
+                  ID: <span className="text-cyan-400/80">{analysisId}</span>
+                </span>
+              </div>
+            )}
           </div>
         )}
 
@@ -534,111 +718,113 @@ function Home() {
         )}
 
         {/* Saved repos */}
-        <div className="mt-10 animate-fade-in-up">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-mono tracking-wider uppercase text-cyan-400/80">
-              Saved repos
-            </h2>
-            <button
-              type="button"
-              onClick={() => void loadSaved()}
-              disabled={savedLoading}
-              className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
-                hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {savedLoading ? 'REFRESHING…' : 'REFRESH'}
-            </button>
-          </div>
-
-          {savedError ? (
-            <div className="mb-3 bg-red-950/30 border border-red-500/30 rounded-lg p-3 font-mono">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <span className="text-red-400 text-xs font-medium uppercase tracking-wider">
-                  Failed to load saved repos
-                </span>
-              </div>
-              <p className="mt-2 text-xs text-red-300/80 break-words">{savedError}</p>
+        {!running && (
+          <div className="mt-10 animate-fade-in-up max-w-xl mx-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-mono tracking-wider uppercase text-cyan-400/80">
+                Saved repos
+              </h2>
+              <button
+                type="button"
+                onClick={() => void loadSaved()}
+                disabled={savedLoading}
+                className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
+                  hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savedLoading ? 'REFRESHING\u2026' : 'REFRESH'}
+              </button>
             </div>
-          ) : null}
 
-          <div className="bg-black/40 border border-cyan-500/20 rounded-lg overflow-hidden">
-            {savedRepos?.length ? (
-              <div className="divide-y divide-cyan-500/10">
-                {savedRepos.map((r: any) => (
-                  <div
-                    key={r.lastAnalysisId}
-                    className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between hover:bg-cyan-500/5 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="font-mono text-sm text-foreground truncate"
-                          title={r.gitUrl}
+            {savedError ? (
+              <div className="mb-3 bg-red-950/30 border border-red-500/30 rounded-lg p-3 font-mono">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  <span className="text-red-400 text-xs font-medium uppercase tracking-wider">
+                    Failed to load saved repos
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-red-300/80 break-words">{savedError}</p>
+              </div>
+            ) : null}
+
+            <div className="bg-black/40 border border-cyan-500/20 rounded-lg overflow-hidden">
+              {savedRepos?.length ? (
+                <div className="divide-y divide-cyan-500/10">
+                  {savedRepos.map((r: any) => (
+                    <div
+                      key={r.lastAnalysisId}
+                      className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between hover:bg-cyan-500/5 transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="font-mono text-sm text-foreground truncate"
+                            title={r.gitUrl}
+                          >
+                            {r.gitUrl}
+                          </span>
+                          <span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border border-cyan-500/20 text-cyan-300/80 bg-cyan-500/5">
+                            {r.ref ? `ref:${r.ref}` : 'ref:(default)'}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className={statusPill(r.lastStatus)}>
+                            {r.lastStatus || 'UNKNOWN'}
+                          </span>
+                          <span className="font-mono text-[11px] text-muted-foreground/70">
+                            UPDATED {formatUpdatedAt(r.lastUpdatedAt)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Link
+                          to="/analysis/$id"
+                          params={{ id: r.lastAnalysisId }}
+                          className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
+                            hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors"
                         >
-                          {r.gitUrl}
-                        </span>
-                        <span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border border-cyan-500/20 text-cyan-300/80 bg-cyan-500/5">
-                          {r.ref ? `ref:${r.ref}` : 'ref:(default)'}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span className={statusPill(r.lastStatus)}>
-                          {r.lastStatus || 'UNKNOWN'}
-                        </span>
-                        <span className="font-mono text-[11px] text-muted-foreground/70">
-                          UPDATED {formatUpdatedAt(r.lastUpdatedAt)}
-                        </span>
+                          OPEN
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGitUrl(r.gitUrl ?? '')
+                            setRef(r.ref ?? '')
+                            void start({ gitUrlOverride: r.gitUrl, refOverride: r.ref })
+                          }}
+                          disabled={running}
+                          className="rounded-md border border-cyan-500/20 bg-black/30 px-3 py-1.5 font-mono text-xs text-cyan-300/90
+                            hover:bg-black/40 hover:border-cyan-400/40 transition-colors
+                            disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          RE-ANALYZE
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openDeleteModal(r.gitUrl ?? '', r.ref ?? '')}
+                          disabled={deleteLoading}
+                          className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 font-mono text-xs text-red-300
+                            hover:bg-red-500/20 hover:border-red-400/50 transition-colors
+                            disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 inline-block" />
+                        </button>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Link
-                        to="/analysis/$id"
-                        params={{ id: r.lastAnalysisId }}
-                        className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
-                          hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors"
-                      >
-                        OPEN
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGitUrl(r.gitUrl ?? '')
-                          setRef(r.ref ?? '')
-                          void start({ gitUrlOverride: r.gitUrl, refOverride: r.ref })
-                        }}
-                        disabled={running}
-                        className="rounded-md border border-cyan-500/20 bg-black/30 px-3 py-1.5 font-mono text-xs text-cyan-300/90
-                          hover:bg-black/40 hover:border-cyan-400/40 transition-colors
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        RE-ANALYZE
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openDeleteModal(r.gitUrl ?? '', r.ref ?? '')}
-                        disabled={deleteLoading}
-                        className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 font-mono text-xs text-red-300
-                          hover:bg-red-500/20 hover:border-red-400/50 transition-colors
-                          disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 inline-block" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="px-4 py-6">
-                <p className="font-mono text-xs text-muted-foreground/70">
-                  No saved repos yet. Run an analysis to populate this list.
-                </p>
-              </div>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-6">
+                  <p className="font-mono text-xs text-muted-foreground/70">
+                    No saved repos yet. Run an analysis to populate this list.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Footer hint */}
