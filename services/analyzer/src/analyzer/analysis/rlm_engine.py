@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
+from functools import lru_cache
 from pathlib import Path
 
 from analyzer.analysis.engine import EmitFn
@@ -58,6 +60,7 @@ class RLMEngine:
         max_output_chars = _env_int("CODELENS_RLM_MAX_OUTPUT_CHARS", 100_000)
         verbose = _env_bool("CODELENS_RLM_VERBOSE", False)
 
+        interpreter = _make_dspy_python_interpreter()
         rlm = dspy.RLM(
             "repo_snapshot, query -> summary, frameworks_json, patterns_json, insights_json",
             max_iterations=max_iterations,
@@ -65,11 +68,19 @@ class RLMEngine:
             max_output_chars=max_output_chars,
             verbose=bool(verbose),
             sub_lm=sub_lm,
+            interpreter=interpreter,
         )
 
         query = _analysis_prompt()
         await emit("ANALYZE", 0.55, "Running RLM analysis")
-        pred = await rlm.aforward(repo_snapshot=snapshot, query=query)
+        try:
+            pred = await rlm.aforward(repo_snapshot=snapshot, query=query)
+        finally:
+            # dspy.RLM does not manage the lifecycle of a user-provided interpreter.
+            try:
+                interpreter.shutdown()
+            except Exception:
+                pass
 
         await emit("ANALYZE", 0.85, "Parsing RLM output")
         summary = getattr(pred, "summary", "")
@@ -162,3 +173,47 @@ def _validate_provider_env(model: str) -> None:
     if provider == "openrouter":
         if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OR_API_KEY")):
             raise RuntimeError("Missing OPENROUTER_API_KEY (or OR_API_KEY) for OpenRouter models")
+
+
+@lru_cache(maxsize=1)
+def _deno_supports_node_modules_dir_mode() -> bool:
+    # Deno 2 switched npm dependency management to a node_modules-based approach.
+    # DSPy RLM's default Pyodide sandbox imports `npm:pyodide/...`, so we need a
+    # Deno that supports `--node-modules-dir=<MODE>` to enable auto-install.
+    try:
+        p = subprocess.run(
+            ["deno", "run", "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if p.returncode != 0:
+            return False
+        return "--node-modules-dir[=<MODE>]" in (p.stdout or "")
+    except Exception:
+        return False
+
+
+def _make_dspy_python_interpreter():  # type: ignore[no-untyped-def]  # pragma: no cover
+    from dspy.primitives.python_interpreter import PythonInterpreter
+
+    interp = PythonInterpreter()
+
+    # Fix for Deno 2's npm module behavior:
+    # - Enable npm auto-install (otherwise `npm:pyodide/...` fails with "unable to find package")
+    # - Allow read access to the created node_modules dir so Pyodide can load its WASM/zip assets.
+    if _deno_supports_node_modules_dir_mode():
+        cmd = getattr(interp, "deno_command", None)
+        if isinstance(cmd, list) and len(cmd) >= 2 and cmd[0] == "deno" and cmd[1] == "run":
+            if not any(str(a).startswith("--node-modules-dir") for a in cmd):
+                cmd.insert(2, "--node-modules-dir=auto")
+
+            node_modules = str(Path.cwd() / "node_modules")
+            for i, a in enumerate(cmd):
+                if isinstance(a, str) and a.startswith("--allow-read="):
+                    # Deno uses comma-separated allowlists for --allow-read.
+                    if node_modules not in a:
+                        cmd[i] = a + "," + node_modules
+                    break
+
+    return interp
