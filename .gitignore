@@ -1,0 +1,27 @@
+# Node
+node_modules/
+dist/
+.turbo/
+.pnpm-store/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# TanStack / Vite
+.tanstack/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.python-version
+
+# Local data (repos, sqlite db, logs)
+.data/
+

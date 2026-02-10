@@ -1,0 +1,25 @@
+[project]
+name = "codelens-analyzer"
+version = "0.0.0"
+requires-python = ">=3.13"
+dependencies = [
+  "connect-python @ git+https://github.com/connectrpc/connect-python.git",
+  "protobuf",
+  "starlette",
+  "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-asyncio",
+  "ruff",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"

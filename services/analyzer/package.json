@@ -1,0 +1,11 @@
+{
+  "name": "@codelens/analyzer",
+  "private": true,
+  "scripts": {
+    "dev": "uv sync --dev && uv run uvicorn analyzer.server:app --app-dir src --reload --host ${CODELENS_HOST:-0.0.0.0} --port ${CODELENS_PORT:-8080}",
+    "build": "node -e \"console.log('analyzer: nothing to build')\"",
+    "lint": "uv sync --dev && uv run ruff check src",
+    "test": "uv sync --dev && uv run pytest -q"
+  }
+}
+

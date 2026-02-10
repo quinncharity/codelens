@@ -1,0 +1,23 @@
+{
+  "name": "@codelens/proto-ts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "node -e \"console.log('proto-ts: no dev (generated artifacts)')\"",
+    "build": "node -e \"console.log('proto-ts: nothing to build')\"",
+    "lint": "node -e \"console.log('proto-ts: no lint')\"",
+    "test": "node -e \"console.log('no tests')\""
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^1.10.0"
+  }
+}

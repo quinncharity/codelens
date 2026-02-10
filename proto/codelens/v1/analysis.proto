@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package codelens.v1;
+
+// Stable, minimal v1 API: start analysis, stream progress, fetch result.
+service AnalysisService {
+  // Fire-and-forget: starts a job and returns an id.
+  rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+
+  // Convenience: starts a job and streams progress until completion.
+  rpc AnalyzeStream(AnalyzeStreamRequest) returns (stream AnalyzeStreamResponse);
+
+  // Fetch a stored analysis result by id.
+  rpc GetAnalysis(GetAnalysisRequest) returns (GetAnalysisResponse);
+}
+
+message AnalyzeRequest {
+  string git_url = 1;
+  string ref = 2; // optional branch/tag/sha
+}
+
+message AnalyzeResponse {
+  string id = 1;
+}
+
+message AnalyzeStreamRequest {
+  string git_url = 1;
+  string ref = 2; // optional branch/tag/sha
+}
+
+message AnalyzeStreamResponse {
+  string id = 1;
+  string phase = 2; // CLONE, INDEX, ANALYZE, STORE, DONE, ERROR
+  float progress = 3; // 0..1
+  string message = 4;
+}
+
+message GetAnalysisRequest {
+  string id = 1;
+}
+
+message GetAnalysisResponse {
+  string id = 1;
+  string git_url = 2;
+  string ref = 3;
+
+  string summary = 4;
+  repeated Framework frameworks = 5;
+  repeated Pattern patterns = 6;
+  repeated Insight insights = 7;
+
+  string status = 8; // SUCCEEDED, FAILED, RUNNING
+  string error = 9;
+}
+
+message Framework {
+  string name = 1;
+  string version = 2;
+  string category = 3; // web, testing, orm, build, etc.
+  float confidence = 4;
+}
+
+message Pattern {
+  string name = 1;
+  string description = 2;
+  repeated string evidence_paths = 3;
+  float confidence = 4;
+}
+
+message Insight {
+  string category = 1; // architecture, quality, risk
+  string title = 2;
+  string description = 3;
+}

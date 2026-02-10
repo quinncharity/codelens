@@ -1,0 +1,15 @@
+version: v2
+plugins:
+  # Python stubs (protobuf + Connect)
+  - remote: buf.build/protocolbuffers/python
+    out: services/analyzer/src
+  - remote: buf.build/protocolbuffers/pyi
+    out: services/analyzer/src
+  - remote: buf.build/connectrpc/python
+    out: services/analyzer/src
+
+  # TypeScript stubs (protobuf + Connect)
+  - remote: buf.build/bufbuild/es:v1.10.0
+    out: packages/proto-ts/src/gen
+  - remote: buf.build/connectrpc/es
+    out: packages/proto-ts/src/gen

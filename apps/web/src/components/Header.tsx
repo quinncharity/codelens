@@ -1,0 +1,17 @@
+import { Link } from '@tanstack/react-router'
+
+import './Header.css'
+
+export default function Header() {
+  return (
+    <header className="header">
+      <nav className="nav">
+        <div className="nav-item">
+          <Link to="/" style={{ fontWeight: 700 }}>
+            CodeLens
+          </Link>
+        </div>
+      </nav>
+    </header>
+  )
+}
