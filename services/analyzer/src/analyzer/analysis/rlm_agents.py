@@ -19,7 +19,7 @@ _TOOLING_GUIDE = (
     "- get_file_content(repo_snapshot, path) -> file content or NOT_FOUND\n"
     "- search_files(repo_snapshot, keyword) -> JSON array of matches\n"
     "- llm_query(prompt) -> ask a sub-LLM to analyze a chunk\n"
-    "- llm_query_batched(prompts) -> analyze multiple chunks IN PARALLEL\n\n"
+    "\n"
     "Tip: `repo_snapshot` is already a Python dict. Pass it directly into tools.\n"
 )
 
@@ -62,8 +62,8 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- Keep results high-signal; omit low-confidence guesses.\n\n"
             "RECOMMENDED STRATEGY:\n"
             "1. Use list_files() to locate manifest/lock/config files included in the snapshot.\n"
-            "2. Batch-analyze manifests in parallel with llm_query_batched().\n"
-            "3. Cross-reference via search_files() for imports/require statements.\n\n"
+            "2. Read each manifest via get_file_content() and extract framework names, versions, and categories.\n"
+            "3. Optionally use search_files() to cross-reference imports if confidence is low.\n\n"
             "OUTPUT:\n"
             "- frameworks: array of {name, version, category, confidence}\n"
             "- category must be one of: language|web|backend|build|testing|infra|database|orm|ai|observability|api|tooling|unknown\n"
@@ -87,7 +87,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- Max 8 evidence_paths per pattern.\n\n"
             "RECOMMENDED STRATEGY:\n"
             "1. Use list_files() to understand directory structure and spot rule/config files.\n"
-            "2. Use llm_query_batched() to analyze groups of manifest/snippet contents.\n"
+            "2. Read key files via get_file_content() and analyze structure, patterns, and conventions.\n"
             "3. Specifically search for AI rules/instructions (AGENTS.md, .cursor/, copilot instructions).\n\n"
             "OUTPUT:\n"
             "- patterns: array of {name, category, description, evidence_paths, confidence}\n"
