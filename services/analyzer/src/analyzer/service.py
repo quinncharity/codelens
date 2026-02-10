@@ -40,7 +40,12 @@ class AnalysisServiceImpl(AnalysisService):
 
         # Initial event so the UI can display the id immediately.
         yield analysis_pb2.AnalyzeStreamResponse(
-            id=job_id, phase="START", progress=0.0, message="Started"
+            id=job_id,
+            phase="START",
+            progress=0.0,
+            message="Started",
+            agent="engine",
+            kind="JOB_START",
         )
 
         async for ev in self._jobs.iter_progress(q):
@@ -49,6 +54,10 @@ class AnalysisServiceImpl(AnalysisService):
                 phase=ev.phase,
                 progress=float(ev.progress),
                 message=ev.message,
+                agent=ev.agent or "",
+                kind=ev.kind or "",
+                step=int(ev.step or 0),
+                step_total=int(ev.step_total or 0),
             )
 
     async def get_analysis(

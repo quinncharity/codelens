@@ -47,6 +47,10 @@ export const AnalyzeStreamResponse = /*@__PURE__*/ proto3.makeMessageType(
     { no: 2, name: "phase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "progress", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
     { no: 4, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "agent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "kind", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "step", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "step_total", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ],
 );
 

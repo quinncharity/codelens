@@ -120,6 +120,36 @@ export declare class AnalyzeStreamResponse extends Message<AnalyzeStreamResponse
    */
   message: string;
 
+  /**
+   * Optional structured metadata for richer UIs/debugging. Old clients ignore.
+   *
+   * e.g. engine, summary, frameworks, patterns, insights
+   *
+   * @generated from field: string agent = 5;
+   */
+  agent: string;
+
+  /**
+   * e.g. AGENT_START, LM_START, TOOL_START, WARN, ERROR
+   *
+   * @generated from field: string kind = 6;
+   */
+  kind: string;
+
+  /**
+   * optional; 1-based position within step_total (0 = unset)
+   *
+   * @generated from field: int32 step = 7;
+   */
+  step: number;
+
+  /**
+   * optional; total steps in the current sequence (0 = unset)
+   *
+   * @generated from field: int32 step_total = 8;
+   */
+  stepTotal: number;
+
   constructor(data?: PartialMessage<AnalyzeStreamResponse>);
 
   static readonly runtime: typeof proto3;

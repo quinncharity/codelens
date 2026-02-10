@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Loader2, Terminal, GitBranch, Sparkles, Trash2, Zap, Cpu, Globe } from 'lucide-react'
 
 import { analysisClient } from '../lib/rpc'
@@ -9,6 +9,17 @@ interface ExampleRepo {
   description: string
   url: string
   category: string
+}
+
+interface StreamEvent {
+  ts: number
+  phase: string
+  progress: number
+  message: string
+  agent?: string
+  kind?: string
+  step?: number
+  stepTotal?: number
 }
 
 const exampleRepos: ExampleRepo[] = [
@@ -111,6 +122,9 @@ function Home() {
   const [progress, setProgress] = useState<number>(0)
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [events, setEvents] = useState<StreamEvent[]>([])
+
+  const logEndRef = useRef<HTMLDivElement | null>(null)
 
   const [savedRepos, setSavedRepos] = useState<any[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
@@ -140,6 +154,11 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (!running) return
+    logEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [events.length, running])
+
   const statusPill = (status: string) => {
     const base =
       'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border'
@@ -160,6 +179,24 @@ function Home() {
     const d = new Date(iso)
     if (Number.isNaN(d.getTime())) return iso
     return d.toLocaleString()
+  }
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts)
+    if (Number.isNaN(d.getTime())) return ''
+    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  }
+
+  const kindPill = (kind: string) => {
+    const base =
+      'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border'
+    const k = String(kind || '').toUpperCase()
+    if (k === 'ERROR') return `${base} border-red-400/30 text-red-300 bg-red-500/10`
+    if (k === 'WARN') return `${base} border-amber-400/30 text-amber-300 bg-amber-500/10`
+    if (k.startsWith('LM_')) return `${base} border-cyan-400/20 text-cyan-200 bg-cyan-500/10`
+    if (k.startsWith('TOOL_')) return `${base} border-cyan-400/15 text-cyan-200/90 bg-black/30`
+    if (k.startsWith('AGENT_')) return `${base} border-cyan-400/25 text-cyan-200 bg-cyan-500/10`
+    return `${base} border-white/10 text-muted-foreground bg-white/5`
   }
 
   const openDeleteModal = (gitUrl: string, ref: string) => {
@@ -204,6 +241,7 @@ function Home() {
     setPhase('START')
     setProgress(0)
     setMessage('Initializing analysis sequence...')
+    setEvents([])
 
     try {
       for await (const ev of analysisClient.analyzeStream({
@@ -214,6 +252,23 @@ function Home() {
         setPhase(ev.phase)
         setProgress(ev.progress ?? 0)
         setMessage(ev.message ?? '')
+        setEvents((prev) => {
+          const next = [
+            ...prev,
+            {
+              ts: Date.now(),
+              phase: ev.phase ?? '',
+              progress: ev.progress ?? 0,
+              message: ev.message ?? '',
+              agent: ev.agent ?? '',
+              kind: ev.kind ?? '',
+              step: ev.step ?? 0,
+              stepTotal: ev.stepTotal ?? 0,
+            },
+          ]
+          if (next.length > 200) next.splice(0, next.length - 200)
+          return next
+        })
 
         if (ev.phase === 'DONE' && ev.id) {
           navigate({ to: '/analysis/$id', params: { id: ev.id } })
@@ -394,6 +449,64 @@ function Home() {
                   <span className="text-cyan-400/60">&gt;</span> {message}
                 </p>
               )}
+
+              {/* Live Log */}
+              {events.length ? (
+                <div className="mt-4 pt-4 border-t border-cyan-500/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-cyan-400/60 uppercase tracking-wider">
+                      Live log
+                    </span>
+                    <span className="text-[11px] font-mono text-cyan-400/40">
+                      {events.length}/200
+                    </span>
+                  </div>
+
+                  <div className="max-h-52 overflow-auto rounded-md border border-cyan-500/10 bg-black/30 px-3 py-2">
+                    <div className="space-y-1 font-mono text-[11px] leading-relaxed">
+                      {events.map((e, idx) => {
+                        const agent = String(e.agent || '').trim()
+                        const kind = String(e.kind || '').trim()
+                        const step = typeof e.step === 'number' ? e.step : 0
+                        const stepTotal =
+                          typeof e.stepTotal === 'number' ? e.stepTotal : 0
+                        const agentLabel =
+                          agent && stepTotal > 0 && step > 0
+                            ? `${agent} ${step}/${stepTotal}`
+                            : agent
+
+                        return (
+                          <div
+                            key={`${e.ts}:${idx}`}
+                            className="flex flex-wrap items-start gap-2"
+                          >
+                            <span className="tabular-nums text-cyan-400/40 shrink-0">
+                              {formatTime(e.ts)}
+                            </span>
+                            <span className="text-cyan-400/60 shrink-0">
+                              {String(e.phase || '').toUpperCase()}
+                            </span>
+                            {agentLabel ? (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border border-cyan-500/20 text-cyan-200 bg-cyan-500/10">
+                                {agentLabel}
+                              </span>
+                            ) : null}
+                            {kind ? (
+                              <span className={kindPill(kind)}>
+                                {String(kind).toUpperCase()}
+                              </span>
+                            ) : null}
+                            <span className="text-muted-foreground break-words">
+                              {e.message || '—'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                      <div ref={logEndRef} />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               
               {/* Analysis ID */}
               {analysisId && (

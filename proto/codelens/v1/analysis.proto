@@ -40,6 +40,11 @@ message AnalyzeStreamResponse {
   string phase = 2; // CLONE, INDEX, ANALYZE, STORE, DONE, ERROR
   float progress = 3; // 0..1
   string message = 4;
+  // Optional structured metadata for richer UIs/debugging. Old clients ignore.
+  string agent = 5; // e.g. engine, summary, frameworks, patterns, insights
+  string kind = 6; // e.g. AGENT_START, LM_START, TOOL_START, WARN, ERROR
+  int32 step = 7; // optional; 1-based position within step_total (0 = unset)
+  int32 step_total = 8; // optional; total steps in the current sequence (0 = unset)
 }
 
 message GetAnalysisRequest {

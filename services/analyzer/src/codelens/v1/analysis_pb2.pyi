@@ -29,16 +29,24 @@ class AnalyzeStreamRequest(_message.Message):
     def __init__(self, git_url: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
 
 class AnalyzeStreamResponse(_message.Message):
-    __slots__ = ("id", "phase", "progress", "message")
+    __slots__ = ("id", "phase", "progress", "message", "agent", "kind", "step", "step_total")
     ID_FIELD_NUMBER: _ClassVar[int]
     PHASE_FIELD_NUMBER: _ClassVar[int]
     PROGRESS_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    AGENT_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    STEP_FIELD_NUMBER: _ClassVar[int]
+    STEP_TOTAL_FIELD_NUMBER: _ClassVar[int]
     id: str
     phase: str
     progress: float
     message: str
-    def __init__(self, id: _Optional[str] = ..., phase: _Optional[str] = ..., progress: _Optional[float] = ..., message: _Optional[str] = ...) -> None: ...
+    agent: str
+    kind: str
+    step: int
+    step_total: int
+    def __init__(self, id: _Optional[str] = ..., phase: _Optional[str] = ..., progress: _Optional[float] = ..., message: _Optional[str] = ..., agent: _Optional[str] = ..., kind: _Optional[str] = ..., step: _Optional[int] = ..., step_total: _Optional[int] = ...) -> None: ...
 
 class GetAnalysisRequest(_message.Message):
     __slots__ = ("id",)

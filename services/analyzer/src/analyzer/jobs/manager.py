@@ -18,6 +18,10 @@ class ProgressEvent:
     phase: str
     progress: float
     message: str
+    agent: str | None = None
+    kind: str | None = None
+    step: int | None = None
+    step_total: int | None = None
 
 
 class JobManager:
@@ -39,32 +43,99 @@ class JobManager:
         asyncio.create_task(self._run_job(job_id=job_id, git_url=git_url, ref=ref, queue=q))
         return job_id, q
 
-    async def _emit(self, queue: Optional["asyncio.Queue[ProgressEvent | None]"], phase: str, progress: float, message: str) -> None:
+    async def _emit(
+        self,
+        queue: Optional["asyncio.Queue[ProgressEvent | None]"],
+        phase: str,
+        progress: float,
+        message: str,
+        *,
+        agent: str | None = None,
+        kind: str | None = None,
+        step: int | None = None,
+        step_total: int | None = None,
+    ) -> None:
         if queue is not None:
-            await queue.put(ProgressEvent(phase=phase, progress=progress, message=message))
+            await queue.put(
+                ProgressEvent(
+                    phase=phase,
+                    progress=progress,
+                    message=message,
+                    agent=agent,
+                    kind=kind,
+                    step=step,
+                    step_total=step_total,
+                )
+            )
 
     async def _run_job(self, *, job_id: str, git_url: str, ref: str, queue: Optional["asyncio.Queue[ProgressEvent | None]"]) -> None:
         async with self._sem:
             try:
-                await self._emit(queue, "CLONE", 0.0, "Cloning repository")
+                await self._emit(
+                    queue,
+                    "CLONE",
+                    0.0,
+                    "Cloning repository",
+                    agent="engine",
+                    kind="PHASE_START",
+                )
                 repo_root = await clone_repo(git_url=git_url, ref=ref, cache_dir=self._repo_cache_dir)
-                await self._emit(queue, "CLONE", 1.0, "Clone complete")
+                await self._emit(
+                    queue,
+                    "CLONE",
+                    0.10,
+                    "Clone complete",
+                    agent="engine",
+                    kind="PHASE_END",
+                )
 
-                async def emit(phase: str, progress: float, message: str) -> None:
-                    await self._emit(queue, phase, progress, message)
+                async def emit(
+                    phase: str,
+                    progress: float,
+                    message: str,
+                    *,
+                    agent: str | None = None,
+                    kind: str | None = None,
+                    step: int | None = None,
+                    step_total: int | None = None,
+                ) -> None:
+                    await self._emit(
+                        queue,
+                        phase,
+                        progress,
+                        message,
+                        agent=agent,
+                        kind=kind,
+                        step=step,
+                        step_total=step_total,
+                    )
 
-                await self._emit(queue, "ANALYZE", 0.0, "Engine: rlm")
                 result: AnalysisResultData = await RLMEngine().analyze(repo_root, emit)
 
-                await self._emit(queue, "STORE", 0.5, "Persisting result")
+                await self._emit(
+                    queue,
+                    "STORE",
+                    0.92,
+                    "Persisting result",
+                    agent="engine",
+                    kind="PHASE_START",
+                )
                 await self._store.set_succeeded(id=job_id, result=result)
-                await self._emit(queue, "DONE", 1.0, "Done")
+                await self._emit(
+                    queue,
+                    "STORE",
+                    0.97,
+                    "Persist complete",
+                    agent="engine",
+                    kind="PHASE_END",
+                )
+                await self._emit(queue, "DONE", 1.0, "Done", agent="engine", kind="JOB_END")
             except GitError as e:
                 await self._store.set_failed(id=job_id, error=str(e))
-                await self._emit(queue, "ERROR", 1.0, str(e))
+                await self._emit(queue, "ERROR", 1.0, str(e), agent="engine", kind="ERROR")
             except Exception as e:
                 await self._store.set_failed(id=job_id, error=str(e))
-                await self._emit(queue, "ERROR", 1.0, str(e))
+                await self._emit(queue, "ERROR", 1.0, str(e), agent="engine", kind="ERROR")
             finally:
                 if queue is not None:
                     await queue.put(None)
