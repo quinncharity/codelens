@@ -1,7 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 
 import { analysisClient } from '../lib/rpc'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
 
 export const Route = createFileRoute('/')({ component: Home })
 
@@ -53,106 +60,92 @@ function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 860, margin: '40px auto', padding: 16 }}>
-      <h1 style={{ marginBottom: 8 }}>CodeLens</h1>
-      <p style={{ marginTop: 0, opacity: 0.8 }}>
-        Paste a Git URL and we’ll detect frameworks and generate a summary.
-      </p>
-
-      <div style={{ display: 'grid', gap: 12, marginTop: 20 }}>
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>Git URL</span>
-          <input
-            value={gitUrl}
-            onChange={(e) => setGitUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo"
-            style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
-            disabled={running}
-          />
-        </label>
-
-        <label style={{ display: 'grid', gap: 6 }}>
-          <span style={{ fontWeight: 600 }}>Ref (optional)</span>
-          <input
-            value={ref}
-            onChange={(e) => setRef(e.target.value)}
-            placeholder="main / v1.2.3 / <sha>"
-            style={{ padding: 10, borderRadius: 8, border: '1px solid #ccc' }}
-            disabled={running}
-          />
-        </label>
-
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button
-            onClick={start}
-            disabled={running || !gitUrl.trim()}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #111',
-              background: running ? '#eee' : '#111',
-              color: running ? '#111' : '#fff',
-              cursor: running ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {running ? 'Analyzing…' : 'Analyze'}
-          </button>
-          {analysisId ? (
-            <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
-              id: {analysisId}
-            </span>
-          ) : null}
-        </div>
-
-        {running ? (
-          <div
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <strong>{phase || '…'}</strong>
-              <span style={{ fontFamily: 'monospace' }}>
-                {(progress * 100).toFixed(0)}%
-              </span>
-            </div>
-            <div style={{ marginTop: 8 }}>
-              <div
-                style={{
-                  height: 10,
-                  background: '#eee',
-                  borderRadius: 999,
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    height: 10,
-                    width: `${Math.max(0, Math.min(1, progress)) * 100}%`,
-                    background: '#111',
-                  }}
+    <main className="container py-10">
+      <div className="mx-auto max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Analyze a repository</CardTitle>
+            <CardDescription>
+              Paste a Git URL and we’ll detect frameworks and generate a summary.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-6"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void start()
+              }}
+            >
+              <div className="grid gap-2">
+                <Label htmlFor="gitUrl">Git URL</Label>
+                <Input
+                  id="gitUrl"
+                  value={gitUrl}
+                  onChange={(e) => setGitUrl(e.target.value)}
+                  placeholder="https://github.com/owner/repo"
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={running}
                 />
               </div>
-            </div>
-            <div style={{ marginTop: 8, opacity: 0.8 }}>{message}</div>
-          </div>
-        ) : null}
 
-        {error ? (
-          <div
-            style={{
-              border: '1px solid #f5c2c7',
-              background: '#f8d7da',
-              color: '#842029',
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            {error}
-          </div>
-        ) : null}
+              <div className="grid gap-2">
+                <Label htmlFor="ref">Ref (optional)</Label>
+                <Input
+                  id="ref"
+                  value={ref}
+                  onChange={(e) => setRef(e.target.value)}
+                  placeholder="main / v1.2.3 / <sha>"
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={running}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="submit" disabled={running || !gitUrl.trim()}>
+                  {running ? <Loader2 className="animate-spin" /> : null}
+                  {running ? 'Analyzing…' : 'Analyze'}
+                </Button>
+
+                {analysisId ? (
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-mono">id: {analysisId}</span>
+                  </div>
+                ) : null}
+              </div>
+
+              {running ? (
+                <div className="grid gap-3 rounded-lg border bg-muted/20 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="text-sm font-medium">
+                      {phase || '…'}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-mono">
+                        {(Math.max(0, Math.min(1, progress)) * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                  <Progress value={Math.max(0, Math.min(1, progress)) * 100} />
+                  {message ? (
+                    <div className="text-sm text-muted-foreground">
+                      {message}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Analysis failed</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </main>
   )

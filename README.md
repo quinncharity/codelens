@@ -10,6 +10,21 @@ This is a monorepo:
 
 ## Quickstart
 
+## Toolchain (mise)
+
+This repo expects a few external tools (notably `deno` for DSPy RLM). We recommend using
+[mise](https://mise.jdx.dev/) to install and pin them consistently.
+
+```bash
+mise install
+```
+
+If you don't want to modify your shell to activate mise globally, you can prefix commands with:
+
+```bash
+mise exec -- pnpm dev
+```
+
 ### 1) Install dependencies
 ```bash
 pnpm install
@@ -29,5 +44,7 @@ Web should run on `http://localhost:3000` (or whatever Start chooses) and the an
 The ConnectRPC base URL is `http://localhost:8080/rpc`.
 
 ## Notes
-- The default analyzer engine is deterministic heuristics and does not require an LLM key.
-- An optional `RLM` engine exists behind `CODELENS_ENGINE=rlm` and may require additional configuration.
+- The analyzer runs a DSPy `RLM` (Recursive Language Model) and requires:
+  - `CODELENS_DSPY_LM` (e.g. `openrouter/google/gemini-2.5-flash` or `openai/gpt-4o-mini`)
+  - Deno installed and on `PATH` for the default sandbox
+  - Provider credentials as required by your chosen LM (e.g. `OPENROUTER_API_KEY` or `OPENAI_API_KEY`)

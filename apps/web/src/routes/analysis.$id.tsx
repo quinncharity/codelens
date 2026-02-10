@@ -1,7 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
+import { ArrowLeft, RefreshCw } from 'lucide-react'
 
 import { analysisClient } from '../lib/rpc'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export const Route = createFileRoute('/analysis/$id')({
   component: AnalysisPage,
@@ -51,120 +58,131 @@ function AnalysisPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, result?.status])
 
+  const statusVariant: 'default' | 'secondary' | 'destructive' | 'outline' =
+    result?.status === 'ERROR'
+      ? 'destructive'
+      : result?.status === 'DONE'
+        ? 'default'
+        : result?.status === 'RUNNING'
+          ? 'secondary'
+          : 'outline'
+
   return (
-    <main style={{ maxWidth: 860, margin: '40px auto', padding: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ marginBottom: 6 }}>Analysis</h1>
-          <div style={{ fontFamily: 'monospace', fontSize: 12, opacity: 0.8 }}>
-            {id}
+    <main className="container py-10">
+      <div className="mx-auto max-w-4xl">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Analysis</h1>
+            <div className="font-mono text-xs text-muted-foreground">{id}</div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw />
+              Refresh
+            </Button>
+            <Button asChild variant="ghost">
+              <Link to="/">
+                <ArrowLeft />
+                Back
+              </Link>
+            </Button>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button
-            onClick={load}
-            style={{
-              padding: '10px 14px',
-              borderRadius: 10,
-              border: '1px solid #111',
-              background: '#fff',
-              cursor: 'pointer',
-            }}
-          >
-            Refresh
-          </button>
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            Back
-          </Link>
+
+        <div className="mt-6 grid gap-4">
+          {loading ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Status</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {error ? (
+            <Alert variant="destructive">
+              <AlertTitle>Failed to load analysis</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          {result ? (
+            <>
+              <Card>
+                <CardHeader className="flex-row items-center justify-between space-y-0">
+                  <CardTitle>Status</CardTitle>
+                  <Badge variant={statusVariant} className="font-mono">
+                    {result.status}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {result.error ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Error</AlertTitle>
+                      <AlertDescription>{result.error}</AlertDescription>
+                    </Alert>
+                  ) : null}
+
+                  {result.summary ? (
+                    <div className="text-sm text-muted-foreground">
+                      {result.summary}
+                    </div>
+                  ) : null}
+
+                  {isRunning ? (
+                    <div className="text-sm text-muted-foreground">
+                      This analysis is still running. Auto-refreshing…
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Frameworks</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {result.frameworks?.length ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Version</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead className="text-right">Confidence</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {result.frameworks.map((f: any) => (
+                          <TableRow key={f.name}>
+                            <TableCell className="font-mono">{f.name}</TableCell>
+                            <TableCell>{f.version || '—'}</TableCell>
+                            <TableCell>{f.category || '—'}</TableCell>
+                            <TableCell className="text-right font-mono">
+                              {typeof f.confidence === 'number'
+                                ? f.confidence.toFixed(2)
+                                : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No frameworks detected yet.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
         </div>
       </div>
-
-      {loading ? <p>Loading…</p> : null}
-      {error ? (
-        <div
-          style={{
-            marginTop: 12,
-            border: '1px solid #f5c2c7',
-            background: '#f8d7da',
-            color: '#842029',
-            borderRadius: 12,
-            padding: 12,
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
-
-      {result ? (
-        <div style={{ marginTop: 18, display: 'grid', gap: 16 }}>
-          <section
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <strong>Status</strong>
-              <span style={{ fontFamily: 'monospace' }}>{result.status}</span>
-            </div>
-            {result.error ? (
-              <div style={{ marginTop: 8, color: '#842029' }}>
-                <strong>Error:</strong> {result.error}
-              </div>
-            ) : null}
-            {result.summary ? (
-              <div style={{ marginTop: 10, opacity: 0.85 }}>{result.summary}</div>
-            ) : null}
-            {isRunning ? (
-              <div style={{ marginTop: 10, opacity: 0.7 }}>
-                This analysis is still running. Auto-refreshing…
-              </div>
-            ) : null}
-          </section>
-
-          <section
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: 12,
-              padding: 12,
-            }}
-          >
-            <strong>Frameworks</strong>
-            {result.frameworks?.length ? (
-              <table style={{ width: '100%', marginTop: 10, borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{ textAlign: 'left', padding: '6px 4px' }}>Name</th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px' }}>Version</th>
-                    <th style={{ textAlign: 'left', padding: '6px 4px' }}>Category</th>
-                    <th style={{ textAlign: 'right', padding: '6px 4px' }}>Confidence</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.frameworks.map((f: any) => (
-                    <tr key={f.name}>
-                      <td style={{ padding: '6px 4px', fontFamily: 'monospace' }}>
-                        {f.name}
-                      </td>
-                      <td style={{ padding: '6px 4px' }}>{f.version || '—'}</td>
-                      <td style={{ padding: '6px 4px' }}>{f.category || '—'}</td>
-                      <td style={{ padding: '6px 4px', textAlign: 'right' }}>
-                        {typeof f.confidence === 'number'
-                          ? f.confidence.toFixed(2)
-                          : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{ marginTop: 8, opacity: 0.7 }}>No frameworks detected yet.</div>
-            )}
-          </section>
-        </div>
-      ) : null}
     </main>
   )
 }
-

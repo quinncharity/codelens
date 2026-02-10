@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Optional
 from uuid import uuid4
 
-from analyzer.analysis.heuristic import analyze as heuristic_analyze
 from analyzer.analysis.rlm_engine import RLMEngine
 from analyzer.git_ops import GitError, clone_repo
 from analyzer.models import AnalysisResultData
@@ -22,10 +21,9 @@ class ProgressEvent:
 
 
 class JobManager:
-    def __init__(self, *, store: SQLiteStore, repo_cache_dir: Path, engine: str, max_concurrent: int) -> None:
+    def __init__(self, *, store: SQLiteStore, repo_cache_dir: Path, max_concurrent: int) -> None:
         self._store = store
         self._repo_cache_dir = repo_cache_dir
-        self._engine = engine
         self._sem = asyncio.Semaphore(max(1, max_concurrent))
 
     async def start(self, *, git_url: str, ref: str) -> str:
@@ -55,12 +53,8 @@ class JobManager:
                 async def emit(phase: str, progress: float, message: str) -> None:
                     await self._emit(queue, phase, progress, message)
 
-                await self._emit(queue, "ANALYZE", 0.0, f"Engine: {self._engine}")
-                result: AnalysisResultData
-                if self._engine == "rlm":
-                    result = await RLMEngine().analyze(repo_root, emit)
-                else:
-                    result = await heuristic_analyze(repo_root, emit)
+                await self._emit(queue, "ANALYZE", 0.0, "Engine: rlm")
+                result: AnalysisResultData = await RLMEngine().analyze(repo_root, emit)
 
                 await self._emit(queue, "STORE", 0.5, "Persisting result")
                 await self._store.set_succeeded(id=job_id, result=result)

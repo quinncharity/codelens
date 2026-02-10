@@ -1,6 +1,7 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import type { ReactNode } from 'react'
 
 import Header from '../components/Header'
 
@@ -17,6 +18,10 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
+        name: 'color-scheme',
+        content: 'dark',
+      },
+      {
         title: 'CodeLens',
       },
     ],
@@ -31,15 +36,17 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
-      <body>
-        <Header />
-        {children}
+      <body className="min-h-dvh">
+        <div className="min-h-dvh">
+          <Header />
+          {children}
+        </div>
         <TanStackDevtools
           config={{
             position: 'bottom-right',
