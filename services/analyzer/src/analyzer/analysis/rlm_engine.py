@@ -313,12 +313,6 @@ def _validate_provider_env(model: str) -> None:
     if provider == "openrouter":
         if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OR_API_KEY")):
             raise RuntimeError("Missing OPENROUTER_API_KEY (or OR_API_KEY) for OpenRouter models")
-    if provider in {"xai", "x-ai"}:
-        if not os.environ.get("XAI_API_KEY"):
-            raise RuntimeError("Missing XAI_API_KEY for xAI models (e.g. xai/grok-code-fast-1)")
-    if provider == "openai":
-        if not os.environ.get("OPENAI_API_KEY"):
-            raise RuntimeError("Missing OPENAI_API_KEY for OpenAI models")
 
 
 @lru_cache(maxsize=1)
