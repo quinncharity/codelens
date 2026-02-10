@@ -45,7 +45,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "OUTPUT:\n"
             "- summary: 1-4 sentences.\n"
         ),
-        max_iterations=50,
+        max_iterations=15,
         max_llm_calls=10,
     ),
     SubAgentConfig(
@@ -69,7 +69,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- category must be one of: language|web|backend|build|testing|infra|database|orm|ai|observability|api|tooling|unknown\n"
             "- Use [] if none found.\n"
         ),
-        max_iterations=50,
+        max_iterations=15,
         max_llm_calls=20,
     ),
     SubAgentConfig(
@@ -95,7 +95,7 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "- evidence_paths must be repo-relative paths present in the snapshot.\n"
             "- Use [] if none found.\n"
         ),
-        max_iterations=50,
+        max_iterations=15,
         max_llm_calls=30,
     ),
     SubAgentConfig(
@@ -113,13 +113,13 @@ SUB_AGENTS: list[SubAgentConfig] = [
             "RECOMMENDED STRATEGY:\n"
             "1. Look for testing gaps by comparing tree structure (tests vs src).\n"
             "2. Look for risk hotspots (auth, secrets, CI, deployment).\n"
-            "3. Use search_files() for keywords like \"password\", \"token\", \"dotenv\", \"auth\", \"jwt\".\n\n"
+            '3. Use search_files() for keywords like "password", "token", "dotenv", "auth", "jwt".\n\n'
             "OUTPUT:\n"
             "- insights: array of {category, title, description}\n"
             "- category examples: architecture, quality, risk, ai.\n"
             "- Use [] if none found.\n"
         ),
-        max_iterations=50,
+        max_iterations=15,
         max_llm_calls=15,
     ),
 ]
