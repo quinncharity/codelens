@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import math
 import os
 import shutil
@@ -51,7 +52,6 @@ class RLMEngine:
         await emit("ANALYZE", 0.35, "Configuring DSPy")
         temperature = _env_float("CODELENS_DSPY_TEMPERATURE", 0.0)
         main_lm = _make_lm(dspy, lm, temperature=temperature)
-        dspy.configure(lm=main_lm)
 
         sub_lm_name = os.environ.get("CODELENS_DSPY_SUB_LM", "").strip()
         if sub_lm_name:
@@ -63,51 +63,63 @@ class RLMEngine:
         max_output_chars = _env_int("CODELENS_RLM_MAX_OUTPUT_CHARS", 100_000)
         verbose = _env_bool("CODELENS_RLM_VERBOSE", False)
 
-        interpreter = _make_dspy_python_interpreter()
-        rlm = dspy.RLM(
-            "repo_snapshot, query -> summary, frameworks_json, patterns_json, insights_json",
-            max_iterations=max_iterations,
-            max_llm_calls=max_llm_calls,
-            max_output_chars=max_output_chars,
-            verbose=bool(verbose),
-            sub_lm=sub_lm,
-            interpreter=interpreter,
+        # DSPy's global configuration is bound to the first asyncio task that calls
+        # `dspy.configure`. This analyzer runs one asyncio task per job, so we must
+        # avoid calling `configure` here and instead use a per-task context.
+        #
+        # Using `dspy.context(...)` keeps analyses isolated (and unblocks concurrent jobs).
+        dspy_ctx = (
+            dspy.context(lm=main_lm)
+            if hasattr(dspy, "context")
+            else contextlib.nullcontext()  # pragma: no cover
         )
 
-        query = _analysis_prompt()
-        await emit("ANALYZE", 0.55, "Running RLM analysis")
+        with dspy_ctx:
+            interpreter = _make_dspy_python_interpreter()
+            rlm = dspy.RLM(
+                "repo_snapshot, query -> summary, frameworks_json, patterns_json, insights_json",
+                max_iterations=max_iterations,
+                max_llm_calls=max_llm_calls,
+                max_output_chars=max_output_chars,
+                verbose=bool(verbose),
+                sub_lm=sub_lm,
+                interpreter=interpreter,
+            )
 
-        # RLM runs can take a while; keep the UI alive with periodic status updates.
-        async def _heartbeat() -> None:
-            start = time.monotonic()
-            while True:
-                await asyncio.sleep(2.0)
-                elapsed = time.monotonic() - start
-                # Smooth, capped progress bump while RLM is running.
-                p0, p1 = 0.55, 0.84
-                ratio = 1.0 - math.exp(-elapsed / 45.0)
-                prog = min(p1, p0 + (p1 - p0) * ratio)
-                await emit(
-                    "ANALYZE",
-                    float(prog),
-                    f"RLM running... ({int(elapsed)}s elapsed, max_iters={max_iterations}, max_calls={max_llm_calls})",
-                )
+            query = _analysis_prompt()
+            await emit("ANALYZE", 0.55, "Running RLM analysis")
 
-        hb = asyncio.create_task(_heartbeat())
-        try:
-            pred = await rlm.aforward(repo_snapshot=snapshot, query=query)
-        finally:
-            hb.cancel()
+            # RLM runs can take a while; keep the UI alive with periodic status updates.
+            async def _heartbeat() -> None:
+                start = time.monotonic()
+                while True:
+                    await asyncio.sleep(2.0)
+                    elapsed = time.monotonic() - start
+                    # Smooth, capped progress bump while RLM is running.
+                    p0, p1 = 0.55, 0.84
+                    ratio = 1.0 - math.exp(-elapsed / 45.0)
+                    prog = min(p1, p0 + (p1 - p0) * ratio)
+                    await emit(
+                        "ANALYZE",
+                        float(prog),
+                        f"RLM running... ({int(elapsed)}s elapsed, max_iters={max_iterations}, max_calls={max_llm_calls})",
+                    )
+
+            hb = asyncio.create_task(_heartbeat())
             try:
-                await hb
-            except Exception:
-                pass
+                pred = await rlm.aforward(repo_snapshot=snapshot, query=query)
+            finally:
+                hb.cancel()
+                try:
+                    await hb
+                except Exception:
+                    pass
 
-            # dspy.RLM does not manage the lifecycle of a user-provided interpreter.
-            try:
-                interpreter.shutdown()
-            except Exception:
-                pass
+                # dspy.RLM does not manage the lifecycle of a user-provided interpreter.
+                try:
+                    interpreter.shutdown()
+                except Exception:
+                    pass
 
         await emit("ANALYZE", 0.85, "Parsing RLM output")
         summary = getattr(pred, "summary", "")
