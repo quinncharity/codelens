@@ -208,3 +208,18 @@ class SQLiteStore:
                 ]
 
         return await asyncio.to_thread(_list)
+
+    async def delete_repo(self, *, git_url: str, ref: str) -> int:
+        def _delete() -> int:
+            with sqlite3.connect(self._db_path) as conn:
+                cur = conn.execute(
+                    """
+                    DELETE FROM analyses
+                    WHERE git_url = ? AND ref = ?
+                    """,
+                    (git_url, ref),
+                )
+                conn.commit()
+                return cur.rowcount
+
+        return await asyncio.to_thread(_delete)

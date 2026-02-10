@@ -329,6 +329,59 @@ export declare class RepoSummary extends Message<RepoSummary> {
 }
 
 /**
+ * @generated from message codelens.v1.DeleteRepoRequest
+ */
+export declare class DeleteRepoRequest extends Message<DeleteRepoRequest> {
+  /**
+   * @generated from field: string git_url = 1;
+   */
+  gitUrl: string;
+
+  /**
+   * @generated from field: string ref = 2;
+   */
+  ref: string;
+
+  constructor(data?: PartialMessage<DeleteRepoRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.DeleteRepoRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteRepoRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteRepoRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteRepoRequest;
+
+  static equals(a: DeleteRepoRequest | PlainMessage<DeleteRepoRequest> | undefined, b: DeleteRepoRequest | PlainMessage<DeleteRepoRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message codelens.v1.DeleteRepoResponse
+ */
+export declare class DeleteRepoResponse extends Message<DeleteRepoResponse> {
+  /**
+   * @generated from field: int32 deleted_count = 1;
+   */
+  deletedCount: number;
+
+  constructor(data?: PartialMessage<DeleteRepoResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.DeleteRepoResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteRepoResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteRepoResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteRepoResponse;
+
+  static equals(a: DeleteRepoResponse | PlainMessage<DeleteRepoResponse> | undefined, b: DeleteRepoResponse | PlainMessage<DeleteRepoResponse> | undefined): boolean;
+}
+
+/**
  * @generated from message codelens.v1.Framework
  */
 export declare class Framework extends Message<Framework> {

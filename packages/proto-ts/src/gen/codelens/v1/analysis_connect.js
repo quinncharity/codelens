@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, GetAnalysisRequest, GetAnalysisResponse, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
+import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, DeleteRepoRequest, DeleteRepoResponse, GetAnalysisRequest, GetAnalysisResponse, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -57,6 +57,17 @@ export const AnalysisService = {
       name: "ListRepos",
       I: ListReposRequest,
       O: ListReposResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Delete all analyses for a specific repository and ref.
+     *
+     * @generated from rpc codelens.v1.AnalysisService.DeleteRepo
+     */
+    deleteRepo: {
+      name: "DeleteRepo",
+      I: DeleteRepoRequest,
+      O: DeleteRepoResponse,
       kind: MethodKind.Unary,
     },
   }

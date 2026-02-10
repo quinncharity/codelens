@@ -28,6 +28,9 @@ class AnalysisService(Protocol):
     async def list_repos(self, request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def delete_repo(self, request: codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
 
 class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
     def __init__(self, service: AnalysisService | AsyncGenerator[AnalysisService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
@@ -73,6 +76,16 @@ class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_repos,
+                ),
+                "/codelens.v1.AnalysisService/DeleteRepo": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteRepo",
+                        service_name="codelens.v1.AnalysisService",
+                        input=codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest,
+                        output=codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_repo,
                 ),
             },
             interceptors=interceptors,
@@ -166,6 +179,26 @@ class AnalysisServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def delete_repo(
+        self,
+        request: codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteRepo",
+                service_name="codelens.v1.AnalysisService",
+                input=codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest,
+                output=codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 
 class AnalysisServiceSync(Protocol):
     def analyze(self, request: codelens_dot_v1_dot_analysis__pb2.AnalyzeRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.AnalyzeResponse:
@@ -175,6 +208,8 @@ class AnalysisServiceSync(Protocol):
     def get_analysis(self, request: codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_repos(self, request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def delete_repo(self, request: codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
 
@@ -221,6 +256,16 @@ class AnalysisServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_repos,
+                ),
+                "/codelens.v1.AnalysisService/DeleteRepo": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteRepo",
+                        service_name="codelens.v1.AnalysisService",
+                        input=codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest,
+                        output=codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_repo,
                 ),
             },
             interceptors=interceptors,
@@ -308,6 +353,26 @@ class AnalysisServiceClientSync(ConnectClientSync):
                 service_name="codelens.v1.AnalysisService",
                 input=codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
                 output=codelens_dot_v1_dot_analysis__pb2.ListReposResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def delete_repo(
+        self,
+        request: codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteRepo",
+                service_name="codelens.v1.AnalysisService",
+                input=codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest,
+                output=codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

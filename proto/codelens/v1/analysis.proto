@@ -16,6 +16,9 @@ service AnalysisService {
   // List distinct repositories that have been analyzed (grouped by git_url + ref),
   // returning the latest analysis per repo/ref.
   rpc ListRepos(ListReposRequest) returns (ListReposResponse);
+
+  // Delete all analyses for a specific repository and ref.
+  rpc DeleteRepo(DeleteRepoRequest) returns (DeleteRepoResponse);
 }
 
 message AnalyzeRequest {
@@ -73,6 +76,15 @@ message RepoSummary {
   string last_analysis_id = 3;
   string last_status = 4; // RUNNING, SUCCEEDED, FAILED
   string last_updated_at = 5; // ISO8601 UTC timestamp
+}
+
+message DeleteRepoRequest {
+  string git_url = 1;
+  string ref = 2;
+}
+
+message DeleteRepoResponse {
+  int32 deleted_count = 1;
 }
 
 message Framework {

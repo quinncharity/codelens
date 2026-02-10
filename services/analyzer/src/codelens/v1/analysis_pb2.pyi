@@ -96,6 +96,20 @@ class RepoSummary(_message.Message):
     last_updated_at: str
     def __init__(self, git_url: _Optional[str] = ..., ref: _Optional[str] = ..., last_analysis_id: _Optional[str] = ..., last_status: _Optional[str] = ..., last_updated_at: _Optional[str] = ...) -> None: ...
 
+class DeleteRepoRequest(_message.Message):
+    __slots__ = ("git_url", "ref")
+    GIT_URL_FIELD_NUMBER: _ClassVar[int]
+    REF_FIELD_NUMBER: _ClassVar[int]
+    git_url: str
+    ref: str
+    def __init__(self, git_url: _Optional[str] = ..., ref: _Optional[str] = ...) -> None: ...
+
+class DeleteRepoResponse(_message.Message):
+    __slots__ = ("deleted_count",)
+    DELETED_COUNT_FIELD_NUMBER: _ClassVar[int]
+    deleted_count: int
+    def __init__(self, deleted_count: _Optional[int] = ...) -> None: ...
+
 class Framework(_message.Message):
     __slots__ = ("name", "version", "category", "confidence")
     NAME_FIELD_NUMBER: _ClassVar[int]

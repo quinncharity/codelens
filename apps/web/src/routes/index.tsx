@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { Loader2, Terminal, GitBranch, Sparkles } from 'lucide-react'
+import { Loader2, Terminal, GitBranch, Sparkles, Trash2 } from 'lucide-react'
 
 import { analysisClient } from '../lib/rpc'
 
@@ -21,6 +21,12 @@ function Home() {
   const [savedRepos, setSavedRepos] = useState<any[]>([])
   const [savedLoading, setSavedLoading] = useState(false)
   const [savedError, setSavedError] = useState<string | null>(null)
+
+  // Delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [repoToDelete, setRepoToDelete] = useState<{ gitUrl: string; ref: string } | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const loadSaved = async () => {
     setSavedError(null)
@@ -60,6 +66,38 @@ function Home() {
     const d = new Date(iso)
     if (Number.isNaN(d.getTime())) return iso
     return d.toLocaleString()
+  }
+
+  const openDeleteModal = (gitUrl: string, ref: string) => {
+    setRepoToDelete({ gitUrl, ref })
+    setDeleteModalOpen(true)
+    setDeleteError(null)
+  }
+
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false)
+    setRepoToDelete(null)
+    setDeleteError(null)
+    setDeleteLoading(false)
+  }
+
+  const confirmDelete = async () => {
+    if (!repoToDelete) return
+
+    setDeleteError(null)
+    setDeleteLoading(true)
+    try {
+      await analysisClient.deleteRepo({
+        gitUrl: repoToDelete.gitUrl,
+        ref: repoToDelete.ref,
+      })
+      closeDeleteModal()
+      void loadSaved()
+    } catch (e: any) {
+      setDeleteError(e?.message ?? String(e))
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   const start = async (opts?: { gitUrlOverride?: string; refOverride?: string }) => {
@@ -357,6 +395,16 @@ function Home() {
                       >
                         RE-ANALYZE
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(r.gitUrl ?? '', r.ref ?? '')}
+                        disabled={deleteLoading}
+                        className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 font-mono text-xs text-red-300
+                          hover:bg-red-500/20 hover:border-red-400/50 transition-colors
+                          disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 inline-block" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -378,6 +426,84 @@ function Home() {
           Enter a Git repository URL to begin analysis
         </p>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && repoToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in-up">
+          <div className="bg-black/90 border border-red-500/30 rounded-lg p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Delete Repository
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  This action cannot be undone
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-2">
+              Are you sure you want to delete all analyses for:
+            </p>
+            <div className="bg-black/50 border border-cyan-500/20 rounded-md p-3 mb-6">
+              <p className="font-mono text-sm text-cyan-300 truncate" title={repoToDelete.gitUrl}>
+                {repoToDelete.gitUrl}
+              </p>
+              <p className="font-mono text-xs text-cyan-400/60 mt-1">
+                ref: {repoToDelete.ref || '(default)'}
+              </p>
+            </div>
+
+            {deleteError && (
+              <div className="mb-4 bg-red-950/30 border border-red-500/30 rounded-lg p-3 font-mono">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-400" />
+                  <span className="text-red-400 text-xs font-medium uppercase tracking-wider">
+                    Error
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-red-300/80 break-words">{deleteError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleteLoading}
+                className="flex-1 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 font-mono text-sm text-cyan-300
+                  hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleteLoading}
+                className="flex-1 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 font-mono text-sm text-red-300
+                  hover:bg-red-500/20 hover:border-red-400/50 transition-colors
+                  disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>DELETING...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>DELETE</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

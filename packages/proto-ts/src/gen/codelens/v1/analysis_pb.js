@@ -114,6 +114,27 @@ export const RepoSummary = /*@__PURE__*/ proto3.makeMessageType(
 );
 
 /**
+ * @generated from message codelens.v1.DeleteRepoRequest
+ */
+export const DeleteRepoRequest = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.DeleteRepoRequest",
+  () => [
+    { no: 1, name: "git_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "ref", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message codelens.v1.DeleteRepoResponse
+ */
+export const DeleteRepoResponse = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.DeleteRepoResponse",
+  () => [
+    { no: 1, name: "deleted_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ],
+);
+
+/**
  * @generated from message codelens.v1.Framework
  */
 export const Framework = /*@__PURE__*/ proto3.makeMessageType(

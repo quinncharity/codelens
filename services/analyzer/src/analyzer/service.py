@@ -17,7 +17,9 @@ class AnalysisServiceImpl(AnalysisService):
         self._store = store
         self._jobs = jobs
 
-    async def analyze(self, request: analysis_pb2.AnalyzeRequest, ctx: RequestContext) -> analysis_pb2.AnalyzeResponse:
+    async def analyze(
+        self, request: analysis_pb2.AnalyzeRequest, ctx: RequestContext
+    ) -> analysis_pb2.AnalyzeResponse:
         git_url = (request.git_url or "").strip()
         ref = (request.ref or "").strip()
         if not git_url:
@@ -121,3 +123,14 @@ class AnalysisServiceImpl(AnalysisService):
                 for r in rows
             ]
         )
+
+    async def delete_repo(
+        self, request: analysis_pb2.DeleteRepoRequest, ctx: RequestContext
+    ) -> analysis_pb2.DeleteRepoResponse:
+        git_url = (request.git_url or "").strip()
+        ref = (request.ref or "").strip()
+        if not git_url:
+            raise ConnectError(Code.INVALID_ARGUMENT, "git_url is required")
+
+        deleted_count = await self._store.delete_repo(git_url=git_url, ref=ref)
+        return analysis_pb2.DeleteRepoResponse(deleted_count=deleted_count)
