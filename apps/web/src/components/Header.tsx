@@ -51,13 +51,6 @@ export default function Header() {
             CodeLens
           </span>
         </Link>
-        
-        <div className="flex items-center gap-4">
-          <span className="hidden sm:inline text-xs text-muted-foreground/60 font-mono uppercase tracking-wider">
-            Framework Detection
-          </span>
-          <div className="w-2 h-2 rounded-full bg-cyan-400/60 animate-pulse-slow" />
-        </div>
       </div>
     </header>
   )
