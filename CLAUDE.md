@@ -74,7 +74,7 @@ UI components: `src/components/ui/` follow shadcn/ui conventions — CVA variant
 ## Environment
 
 Copy `.env.example` to `.env`. Required variables:
-- `CODELENS_DSPY_LM` — DSPy language model identifier (e.g. `groq/llama-3.3-70b-versatile`)
+- `CODELENS_DSPY_LM` — DSPy language model identifier (e.g. `groq/openai/gpt-oss-120b`)
 - `GROQ_API_KEY`
 - Deno must be on PATH (used by DSPy RLM sandbox). Install via `mise install`.
 
