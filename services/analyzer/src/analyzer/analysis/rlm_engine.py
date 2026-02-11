@@ -313,6 +313,9 @@ def _validate_provider_env(model: str) -> None:
     if provider == "openrouter":
         if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OR_API_KEY")):
             raise RuntimeError("Missing OPENROUTER_API_KEY (or OR_API_KEY) for OpenRouter models")
+    elif provider == "groq":
+        if not os.environ.get("GROQ_API_KEY"):
+            raise RuntimeError("Missing GROQ_API_KEY for Groq models")
 
 
 @lru_cache(maxsize=1)

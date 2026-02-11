@@ -74,8 +74,8 @@ UI components: `src/components/ui/` follow shadcn/ui conventions — CVA variant
 ## Environment
 
 Copy `.env.example` to `.env`. Required variables:
-- `CODELENS_DSPY_LM` — DSPy language model identifier (e.g. `openrouter/x-ai/grok-code-fast-1`)
-- `OPENROUTER_API_KEY` (or `OR_API_KEY`)
+- `CODELENS_DSPY_LM` — DSPy language model identifier (e.g. `groq/llama-3.3-70b-versatile`)
+- `GROQ_API_KEY`
 - Deno must be on PATH (used by DSPy RLM sandbox). Install via `mise install`.
 
 ## Code Style

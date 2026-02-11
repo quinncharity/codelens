@@ -45,6 +45,6 @@ The ConnectRPC base URL is `http://localhost:8080/rpc`.
 
 ## Notes
 - The analyzer runs a DSPy `RLM` (Recursive Language Model) and requires:
-  - `CODELENS_DSPY_LM` (e.g. `openrouter/x-ai/grok-code-fast-1`)
+  - `CODELENS_DSPY_LM` (e.g. `groq/llama-3.3-70b-versatile`)
   - Deno installed and on `PATH` for the default sandbox
-  - `OPENROUTER_API_KEY` (or `OR_API_KEY`)
+  - `GROQ_API_KEY`
