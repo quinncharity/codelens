@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package codelens.v1;
+
+// Stable, minimal v1 API: start analysis, stream progress, fetch result.
+service AnalysisService {
+  // Fire-and-forget: starts a job and returns an id.
+  rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+
+  // Convenience: starts a job and streams progress until completion.
+  rpc AnalyzeStream(AnalyzeStreamRequest) returns (stream AnalyzeStreamResponse);
+
+  // Fetch a stored analysis result by id.
+  rpc GetAnalysis(GetAnalysisRequest) returns (GetAnalysisResponse);
+
+  // List distinct repositories that have been analyzed (grouped by git_url + ref),
+  // returning the latest analysis per repo/ref.
+  rpc ListRepos(ListReposRequest) returns (ListReposResponse);
+
+  // Delete all analyses for a specific repository and ref.
+  rpc DeleteRepo(DeleteRepoRequest) returns (DeleteRepoResponse);
+}
+
+message AnalyzeRequest {
+  string git_url = 1;
+  string ref = 2; // optional branch/tag/sha
+}
+
+message AnalyzeResponse {
+  string id = 1;
+}
+
+message AnalyzeStreamRequest {
+  string git_url = 1;
+  string ref = 2; // optional branch/tag/sha
+}
+
+message AnalyzeStreamResponse {
+  string id = 1;
+  string phase = 2; // CLONE, INDEX, ANALYZE, STORE, DONE, ERROR
+  float progress = 3; // 0..1
+  string message = 4;
+  // Optional structured metadata for richer UIs/debugging. Old clients ignore.
+  string agent = 5; // e.g. engine, summary, frameworks, patterns, insights
+  string kind = 6; // e.g. AGENT_START, LM_START, TOOL_START, WARN, ERROR
+  int32 step = 7; // optional; 1-based position within step_total (0 = unset)
+  int32 step_total = 8; // optional; total steps in the current sequence (0 = unset)
+}
+
+message GetAnalysisRequest {
+  string id = 1;
+}
+
+message GetAnalysisResponse {
+  string id = 1;
+  string git_url = 2;
+  string ref = 3;
+
+  string summary = 4;
+  repeated Framework frameworks = 5;
+  repeated Pattern patterns = 6;
+  repeated Insight insights = 7;
+
+  string status = 8; // SUCCEEDED, FAILED, RUNNING
+  string error = 9;
+}
+
+message ListReposRequest {
+  // Optional pagination. Server may clamp values for safety.
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListReposResponse {
+  repeated RepoSummary repos = 1;
+}
+
+message RepoSummary {
+  string git_url = 1;
+  string ref = 2;
+  string last_analysis_id = 3;
+  string last_status = 4; // RUNNING, SUCCEEDED, FAILED
+  string last_updated_at = 5; // ISO8601 UTC timestamp
+}
+
+message DeleteRepoRequest {
+  string git_url = 1;
+  string ref = 2;
+}
+
+message DeleteRepoResponse {
+  int32 deleted_count = 1;
+}
+
+message Framework {
+  string name = 1;
+  string version = 2;
+  string category = 3; // web, testing, orm, build, etc.
+  float confidence = 4;
+}
+
+message Pattern {
+  string name = 1;
+  string description = 2;
+  repeated string evidence_paths = 3;
+  float confidence = 4;
+  // Category for grouping in the UI.
+  // Allowed: architecture, implementation, quality, ai_rule, unknown.
+  string category = 5;
+}
+
+message Insight {
+  string category = 1; // architecture, quality, risk
+  string title = 2;
+  string description = 3;
+}
