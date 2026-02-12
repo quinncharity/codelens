@@ -3,41 +3,42 @@
 @config '../tailwind.config.ts';
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 220 30% 15%;
+  --background: 38 39% 86%;
+  --foreground: 211 37% 21%;
 
   --card: 0 0% 100%;
-  --card-foreground: 220 30% 15%;
+  --card-foreground: 211 37% 21%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 220 30% 15%;
+  --popover-foreground: 211 37% 21%;
 
-  --primary: 220 60% 25%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 211 37% 21%;
+  --primary-foreground: 38 39% 86%;
 
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 220 30% 15%;
+  --secondary: 197 27% 67%;
+  --secondary-foreground: 211 37% 21%;
 
-  --muted: 220 14% 96%;
-  --muted-foreground: 220 10% 46%;
+  --muted: 38 20% 90%;
+  --muted-foreground: 206 27% 45%;
 
-  --accent: 220 60% 25%;
+  --accent: 206 27% 45%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 220 13% 91%;
-  --input: 220 13% 91%;
-  --ring: 220 60% 25%;
+  --border: 197 20% 80%;
+  --input: 197 20% 80%;
+  --ring: 206 27% 45%;
 
   --radius: 0.5rem;
 
   --app-header-h: 56px;
 
-  --navy: #1e3a5f;
-  --navy-light: #2c5282;
-  --navy-dark: #172b45;
+  --c1: #213448;
+  --c2: #547792;
+  --c3: #94b4c1;
+  --c4: #eae0cf;
 }
 
 @layer base {
@@ -73,7 +74,7 @@
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy-light) 100%);
+    background: linear-gradient(135deg, var(--c1) 0%, var(--c2) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

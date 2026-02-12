@@ -36,15 +36,15 @@ export default function Header() {
   return (
     <header
       ref={headerRef}
-      className="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-md"
+      className="fixed top-0 left-0 right-0 z-50 border-b border-[var(--c3)]/30 bg-[var(--c4)]/80 backdrop-blur-md"
     >
       <div className="container flex h-14 items-center justify-between">
         <Link 
           to="/" 
           className="group flex items-center gap-2 font-semibold tracking-tight transition-all duration-300"
         >
-          <Terminal className="w-5 h-5 text-[var(--navy)] transition-all duration-300" />
-          <span className="text-foreground group-hover:text-[var(--navy-light)] transition-colors duration-300">
+          <Terminal className="w-5 h-5 text-[var(--c1)] transition-all duration-300" />
+          <span className="text-foreground group-hover:text-[var(--c2)] transition-colors duration-300">
             CodeLens
           </span>
         </Link>

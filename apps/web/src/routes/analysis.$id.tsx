@@ -311,7 +311,7 @@ function AnalysisPage() {
                     {result.insights.map((i: any, idx: number) => (
                       <div
                         key={`${i.title}:${idx}`}
-                        className="rounded-md border border-gray-200 bg-gray-50 p-3"
+                        className="rounded-md border border-[var(--c3)]/30 bg-[var(--c4)]/40 p-3"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="text-sm font-medium">{i.title}</div>
