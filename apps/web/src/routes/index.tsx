@@ -96,7 +96,7 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
 
   return (
     <div className="w-full animate-fade-in-up">
-      <h2 className="text-sm font-mono tracking-wider uppercase text-cyan-400/80 mb-4 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-wider uppercase text-[var(--c1)] mb-4 flex items-center gap-2">
         <Sparkles className="w-4 h-4" />
         Try an Example
       </h2>
@@ -104,9 +104,9 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
       {Object.entries(grouped).map(([category, repos], groupIdx) => (
         <div key={category} className="mb-6 last:mb-0">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-cyan-400/60">{categoryIcons[category]}</span>
-            <h3 className="text-xs font-mono uppercase tracking-wider text-cyan-400/60">{category}</h3>
-            <div className="flex-1 h-px bg-cyan-500/10" />
+            <span className="text-[var(--c2)]">{categoryIcons[category]}</span>
+            <h3 className="text-xs font-mono uppercase tracking-wider text-[var(--c2)]">{category}</h3>
+            <div className="flex-1 h-px bg-[var(--c3)]/30" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -115,22 +115,19 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
                 key={repo.name}
                 onClick={() => onSelect(repo)}
                 disabled={running}
-                className="group relative text-left bg-black/40 border border-cyan-500/20 rounded-lg p-4
-                  hover:border-cyan-400/40 hover:bg-cyan-500/5
+                className="group relative text-left bg-white border border-[var(--c3)]/30 rounded-lg p-4
+                  hover:border-[var(--c2)]/30 hover:bg-[var(--c4)]/50
+                  shadow-sm hover:shadow-md
                   transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed
                   animate-fade-in-up"
                 style={{ animationDelay: `${(groupIdx * 100) + (idx * 50)}ms` }}
               >
                 {/* Glow effect on hover */}
-                <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 rounded-lg bg-cyan-500/5" />
-                  <div className="absolute inset-0 rounded-lg shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]" />
-                </div>
 
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
-                    <GitBranch className="w-3.5 h-3.5 text-cyan-400/60 group-hover:text-cyan-400 transition-colors" />
-                    <span className="font-mono text-sm text-foreground group-hover:text-cyan-300 transition-colors truncate">
+                    <GitBranch className="w-3.5 h-3.5 text-[var(--c2)] group-hover:text-[var(--c1)] transition-colors" />
+                    <span className="font-mono text-sm text-foreground group-hover:text-[var(--c1)] transition-colors truncate">
                       {repo.name}
                     </span>
                   </div>
@@ -141,7 +138,7 @@ function ExampleRepos({ onSelect, running }: { onSelect: (repo: ExampleRepo) => 
 
                 {/* Arrow indicator */}
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-1 group-hover:translate-x-0">
-                  <span className="text-cyan-400/60 text-xs font-mono">&rarr;</span>
+                  <span className="text-[var(--c2)] text-xs font-mono">&rarr;</span>
                 </div>
               </button>
             ))}
@@ -162,57 +159,57 @@ function AgentCard({ agent }: { agent: AgentState }) {
   }, [agent.events.length])
 
   const statusDot = {
-    pending: 'bg-white/20',
-    running: 'bg-cyan-400 animate-pulse',
-    completed: 'bg-emerald-400',
-    error: 'bg-red-400',
+    pending: 'bg-[var(--c3)]/40',
+    running: 'bg-[var(--c1)] animate-pulse',
+    completed: 'bg-emerald-500',
+    error: 'bg-red-500',
   }[agent.status]
 
   const barColor = {
-    pending: 'bg-white/10',
-    running: 'bg-cyan-400',
-    completed: 'bg-emerald-400',
-    error: 'bg-red-400',
+    pending: 'bg-[var(--c3)]/30',
+    running: 'bg-[var(--c1)]',
+    completed: 'bg-emerald-500',
+    error: 'bg-red-500',
   }[agent.status]
 
   const icon = AGENT_DISPLAY[agent.name]?.icon
 
   return (
-    <div className="bg-black/40 border border-cyan-500/20 rounded-lg p-4 font-mono">
+    <div className="bg-white border border-[var(--c3)]/30 rounded-lg p-4 font-mono shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
           <div className={cn('w-2 h-2 rounded-full shrink-0', statusDot)} />
-          <span className="text-cyan-400/70">{icon}</span>
-          <span className="text-xs font-medium text-cyan-400 uppercase tracking-wider">
+          <span className="text-[var(--c2)]">{icon}</span>
+          <span className="text-xs font-medium text-[var(--c1)] uppercase tracking-wider">
             {agent.displayName}
           </span>
         </div>
-        <span className="text-[11px] text-cyan-400/50 tabular-nums">
+        <span className="text-[11px] text-[var(--c3)] tabular-nums">
           {Math.round(agent.progress * 100)}%
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-1 bg-cyan-500/10 rounded-full overflow-hidden mb-2.5">
+      <div className="relative h-1 bg-[var(--c3)]/20 rounded-full overflow-hidden mb-2.5">
         <div
           className={cn('absolute inset-y-0 left-0 rounded-full transition-all duration-500', barColor)}
           style={{ width: `${Math.max(0, Math.min(100, agent.progress * 100))}%` }}
         />
         {agent.status === 'running' && (
-          <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent animate-scan" />
+          <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-[var(--c1)]/20 to-transparent animate-scan" />
         )}
       </div>
 
       {/* Message */}
       <p className="text-[11px] text-muted-foreground truncate mb-2">
-        <span className="text-cyan-400/50">&gt;</span> {agent.message}
+        <span className="text-[var(--c2)]">&gt;</span> {agent.message}
       </p>
 
       {/* Mini event log */}
       {agent.events.length > 0 && (
-        <div className="max-h-16 overflow-auto rounded border border-cyan-500/10 bg-black/30 px-2 py-1">
-          <div className="space-y-0.5 text-[10px] leading-relaxed text-muted-foreground/60">
+        <div className="max-h-16 overflow-auto rounded border border-[var(--c3)]/20 bg-[var(--c4)]/40 px-2 py-1">
+          <div className="space-y-0.5 text-[10px] leading-relaxed text-muted-foreground">
             {agent.events.slice(-6).map((e, idx) => (
               <div key={`${e.ts}:${idx}`} className="truncate">
                 {e.message || '\u2014'}
@@ -301,15 +298,15 @@ function Home() {
     const base =
       'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border'
     if (status === 'SUCCEEDED') {
-      return `${base} border-emerald-400/30 text-emerald-300 bg-emerald-500/10`
+      return `${base} border-emerald-200 text-emerald-700 bg-emerald-50`
     }
     if (status === 'FAILED') {
-      return `${base} border-red-400/30 text-red-300 bg-red-500/10`
+      return `${base} border-red-200 text-red-700 bg-red-50`
     }
     if (status === 'RUNNING') {
-      return `${base} border-cyan-400/30 text-cyan-200 bg-cyan-500/10`
+      return `${base} border-[var(--c2)]/20 text-[var(--c1)] bg-[var(--c3)]/15`
     }
-    return `${base} border-white/10 text-muted-foreground bg-white/5`
+    return `${base} border-gray-200 text-muted-foreground bg-[var(--c4)]/40`
   }
 
   const formatUpdatedAt = (iso: string) => {
@@ -329,12 +326,12 @@ function Home() {
     const base =
       'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border'
     const k = String(kind || '').toUpperCase()
-    if (k === 'ERROR' || k === 'AGENT_ERROR') return `${base} border-red-400/30 text-red-300 bg-red-500/10`
-    if (k === 'WARN') return `${base} border-amber-400/30 text-amber-300 bg-amber-500/10`
-    if (k.startsWith('LM_')) return `${base} border-cyan-400/20 text-cyan-200 bg-cyan-500/10`
-    if (k.startsWith('TOOL_')) return `${base} border-cyan-400/15 text-cyan-200/90 bg-black/30`
-    if (k.startsWith('AGENT_')) return `${base} border-cyan-400/25 text-cyan-200 bg-cyan-500/10`
-    return `${base} border-white/10 text-muted-foreground bg-white/5`
+    if (k === 'ERROR' || k === 'AGENT_ERROR') return `${base} border-red-200 text-red-700 bg-red-50`
+    if (k === 'WARN') return `${base} border-amber-200 text-amber-700 bg-amber-50`
+    if (k.startsWith('LM_')) return `${base} border-[var(--c3)]/30 text-[var(--c1)] bg-[var(--c3)]/15`
+    if (k.startsWith('TOOL_')) return `${base} border-gray-200 text-[var(--c2)] bg-[var(--c4)]/40`
+    if (k.startsWith('AGENT_')) return `${base} border-[var(--c3)]/30 text-[var(--c1)] bg-[var(--c3)]/15`
+    return `${base} border-gray-200 text-muted-foreground bg-[var(--c4)]/40`
   }
 
   const openDeleteModal = (gitUrl: string, ref: string) => {
@@ -479,7 +476,7 @@ function Home() {
         {/* Hero Title */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-4">
-            <Terminal className="w-8 h-8 text-cyan-400" />
+            <Terminal className="w-8 h-8 text-[var(--c1)]" />
             <h1 className="text-4xl font-bold tracking-tight text-gradient">
               CodeLens
             </h1>
@@ -499,7 +496,7 @@ function Home() {
         >
           {/* Git URL Input */}
           <div className="group">
-            <label className="block text-sm font-medium text-cyan-400/80 mb-2 font-mono tracking-wider uppercase text-xs">
+            <label className="block text-sm font-medium text-[var(--c1)] mb-2 font-mono tracking-wider uppercase text-xs">
               <span className="inline-flex items-center gap-2">
                 <GitBranch className="w-3.5 h-3.5" />
                 Repository URL
@@ -514,22 +511,19 @@ function Home() {
                 disabled={running}
                 autoComplete="off"
                 spellCheck={false}
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-4
+                className="w-full bg-white border border-[var(--c3)]/30 rounded-lg px-4 py-4
                   text-foreground placeholder:text-muted-foreground/50
-                  focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30
+                  focus:outline-none focus:border-[var(--c2)] focus:ring-1 focus:ring-[var(--c2)]/30
                   transition-all duration-300 font-mono text-sm
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  hover:border-cyan-500/30"
+                  hover:border-[var(--c3)] shadow-sm"
               />
-              <div className="absolute inset-0 rounded-lg pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity duration-500">
-                <div className="absolute inset-0 rounded-lg bg-cyan-500/5" />
-              </div>
             </div>
           </div>
 
           {/* Ref Input */}
           <div className="group">
-            <label className="block text-sm font-medium text-cyan-400/80 mb-2 font-mono tracking-wider uppercase text-xs">
+            <label className="block text-sm font-medium text-[var(--c1)] mb-2 font-mono tracking-wider uppercase text-xs">
               <span className="inline-flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5" />
                 Reference (optional)
@@ -544,12 +538,12 @@ function Home() {
                 disabled={running}
                 autoComplete="off"
                 spellCheck={false}
-                className="w-full bg-black/40 border border-cyan-500/20 rounded-lg px-4 py-3
+                className="w-full bg-white border border-[var(--c3)]/30 rounded-lg px-4 py-3
                   text-foreground placeholder:text-muted-foreground/50
-                  focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30
+                  focus:outline-none focus:border-[var(--c2)] focus:ring-1 focus:ring-[var(--c2)]/30
                   transition-all duration-300 font-mono text-sm
                   disabled:opacity-50 disabled:cursor-not-allowed
-                  hover:border-cyan-500/30"
+                  hover:border-[var(--c3)] shadow-sm"
               />
             </div>
           </div>
@@ -558,13 +552,13 @@ function Home() {
           <button
             type="submit"
             disabled={running || !gitUrl.trim()}
-            className="w-full group relative overflow-hidden rounded-lg bg-cyan-500/10
-              border border-cyan-500/30 hover:border-cyan-400/50
-              px-6 py-4 font-mono text-sm font-medium text-cyan-400
-              transition-all duration-300
-              disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-cyan-500/30
-              hover:bg-cyan-500/20 hover:text-cyan-300
-              focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
+            className="w-full group relative overflow-hidden rounded-lg bg-[var(--c1)]
+              border border-[var(--c1)] hover:border-[var(--c2)]
+              px-6 py-4 font-mono text-sm font-medium text-white
+              transition-all duration-300 shadow-sm hover:shadow-md
+              disabled:opacity-50 disabled:cursor-not-allowed
+              hover:bg-[var(--c2)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--c2)]/30"
           >
             <span className="relative z-10 flex items-center justify-center gap-2">
               {running ? (
@@ -579,10 +573,6 @@ function Home() {
                 </>
               )}
             </span>
-            {!running && (
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-cyan-500/10 to-cyan-500/0
-                translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            )}
           </button>
         </form>
 
@@ -604,28 +594,28 @@ function Home() {
         {running && (
           <div className="mt-8 animate-fade-in-up">
             {/* Overall Status Bar */}
-            <div className="bg-black/40 border border-cyan-500/20 rounded-lg p-4 font-mono mb-4">
+            <div className="bg-white border border-[var(--c3)]/30 rounded-lg p-4 font-mono mb-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="text-cyan-400 font-medium text-sm">
+                  <div className="w-2 h-2 rounded-full bg-[var(--c1)] animate-pulse" />
+                  <span className="text-[var(--c1)] font-medium text-sm">
                     {phase || 'INITIALIZING'}
                   </span>
                 </div>
-                <span className="text-xs text-cyan-400/60 tabular-nums">
+                <span className="text-xs text-[var(--c3)] tabular-nums">
                   {Math.round(overallProgress * 100)}%
                 </span>
               </div>
-              <div className="relative h-1 bg-cyan-500/10 rounded-full overflow-hidden">
+              <div className="relative h-1 bg-[var(--c3)]/20 rounded-full overflow-hidden">
                 <div
-                  className="absolute inset-y-0 left-0 bg-cyan-400 rounded-full transition-all duration-500"
+                  className="absolute inset-y-0 left-0 bg-[var(--c1)] rounded-full transition-all duration-500"
                   style={{ width: `${Math.max(0, Math.min(100, overallProgress * 100))}%` }}
                 />
-                <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent animate-scan" />
+                <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-[var(--c1)]/20 to-transparent animate-scan" />
               </div>
               {message && phase !== 'ANALYZE' && (
                 <p className="mt-2 text-sm text-muted-foreground">
-                  <span className="text-cyan-400/60">&gt;</span> {message}
+                  <span className="text-[var(--c2)]">&gt;</span> {message}
                 </p>
               )}
             </div>
@@ -641,12 +631,12 @@ function Home() {
 
             {/* Collapsible Raw Log */}
             {events.length > 0 && (
-              <details className="bg-black/40 border border-cyan-500/10 rounded-lg">
-                <summary className="px-4 py-2 text-xs text-cyan-400/40 font-mono cursor-pointer hover:text-cyan-400/60 transition-colors select-none">
+              <details className="bg-white border border-[var(--c3)]/30 rounded-lg shadow-sm">
+                <summary className="px-4 py-2 text-xs text-[var(--c3)] font-mono cursor-pointer hover:text-[var(--c2)] transition-colors select-none">
                   Raw log ({events.length}/200)
                 </summary>
                 <div className="px-3 pb-3">
-                  <div className="max-h-52 overflow-auto rounded-md border border-cyan-500/10 bg-black/30 px-3 py-2">
+                  <div className="max-h-52 overflow-auto rounded-md border border-[var(--c3)]/20 bg-[var(--c4)]/40 px-3 py-2">
                     <div className="space-y-1 font-mono text-[11px] leading-relaxed">
                       {events.map((e, idx) => {
                         const agent = String(e.agent || '').trim()
@@ -664,14 +654,14 @@ function Home() {
                             key={`${e.ts}:${idx}`}
                             className="flex flex-wrap items-start gap-2"
                           >
-                            <span className="tabular-nums text-cyan-400/40 shrink-0">
+                            <span className="tabular-nums text-[var(--c3)] shrink-0">
                               {formatTime(e.ts)}
                             </span>
-                            <span className="text-cyan-400/60 shrink-0">
+                            <span className="text-[var(--c2)] shrink-0">
                               {String(e.phase || '').toUpperCase()}
                             </span>
                             {agentLabel ? (
-                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border border-cyan-500/20 text-cyan-200 bg-cyan-500/10">
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-mono uppercase tracking-wide border border-[var(--c3)]/30 text-[var(--c1)] bg-[var(--c3)]/15">
                                 {agentLabel}
                               </span>
                             ) : null}
@@ -697,7 +687,7 @@ function Home() {
             {analysisId && (
               <div className="mt-3">
                 <span className="text-xs text-muted-foreground font-mono">
-                  ID: <span className="text-cyan-400/80">{analysisId}</span>
+                  ID: <span className="text-[var(--c1)]">{analysisId}</span>
                 </span>
               </div>
             )}
@@ -707,12 +697,12 @@ function Home() {
         {/* Error Display */}
         {error && (
           <div className="mt-6 animate-fade-in-up">
-            <div className="bg-red-950/30 border border-red-500/30 rounded-lg p-4 font-mono">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 font-mono">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <span className="text-red-400 text-sm font-medium uppercase tracking-wider">Error</span>
+                <div className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="text-red-700 text-sm font-medium uppercase tracking-wider">Error</span>
               </div>
-              <p className="text-sm text-red-300/80">{error}</p>
+              <p className="text-sm text-red-600">{error}</p>
             </div>
           </div>
         )}
@@ -721,15 +711,15 @@ function Home() {
         {!running && (
           <div className="mt-10 animate-fade-in-up max-w-xl mx-auto">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-mono tracking-wider uppercase text-cyan-400/80">
+              <h2 className="text-sm font-mono tracking-wider uppercase text-[var(--c1)]">
                 Saved repos
               </h2>
               <button
                 type="button"
                 onClick={() => void loadSaved()}
                 disabled={savedLoading}
-                className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
-                  hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors
+                className="rounded-md border border-[var(--c3)]/30 bg-white px-3 py-1.5 font-mono text-xs text-[var(--c1)]
+                  hover:bg-[var(--c4)]/50 hover:border-[var(--c3)] transition-colors shadow-sm
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savedLoading ? 'REFRESHING\u2026' : 'REFRESH'}
@@ -737,24 +727,24 @@ function Home() {
             </div>
 
             {savedError ? (
-              <div className="mb-3 bg-red-950/30 border border-red-500/30 rounded-lg p-3 font-mono">
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-lg p-3 font-mono">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-400" />
-                  <span className="text-red-400 text-xs font-medium uppercase tracking-wider">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="text-red-700 text-xs font-medium uppercase tracking-wider">
                     Failed to load saved repos
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-red-300/80 break-words">{savedError}</p>
+                <p className="mt-2 text-xs text-red-600 break-words">{savedError}</p>
               </div>
             ) : null}
 
-            <div className="bg-black/40 border border-cyan-500/20 rounded-lg overflow-hidden">
+            <div className="bg-white border border-[var(--c3)]/30 rounded-lg overflow-hidden shadow-sm">
               {savedRepos?.length ? (
-                <div className="divide-y divide-cyan-500/10">
+                <div className="divide-y divide-[var(--c3)]/20">
                   {savedRepos.map((r: any) => (
                     <div
                       key={r.lastAnalysisId}
-                      className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between hover:bg-cyan-500/5 transition-colors"
+                      className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between hover:bg-[var(--c4)]/50 transition-colors"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
@@ -764,7 +754,7 @@ function Home() {
                           >
                             {r.gitUrl}
                           </span>
-                          <span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border border-cyan-500/20 text-cyan-300/80 bg-cyan-500/5">
+                          <span className="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono uppercase tracking-wide border border-[var(--c3)]/30 text-[var(--c1)] bg-[var(--c3)]/15">
                             {r.ref ? `ref:${r.ref}` : 'ref:(default)'}
                           </span>
                         </div>
@@ -782,8 +772,8 @@ function Home() {
                         <Link
                           to="/analysis/$id"
                           params={{ id: r.lastAnalysisId }}
-                          className="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs text-cyan-300
-                            hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors"
+                          className="rounded-md border border-[var(--c1)]/20 bg-[var(--c1)] px-3 py-1.5 font-mono text-xs text-white
+                            hover:bg-[var(--c2)] transition-colors shadow-sm"
                         >
                           OPEN
                         </Link>
@@ -795,8 +785,8 @@ function Home() {
                             void start({ gitUrlOverride: r.gitUrl, refOverride: r.ref })
                           }}
                           disabled={running}
-                          className="rounded-md border border-cyan-500/20 bg-black/30 px-3 py-1.5 font-mono text-xs text-cyan-300/90
-                            hover:bg-black/40 hover:border-cyan-400/40 transition-colors
+                          className="rounded-md border border-[var(--c3)]/30 bg-white px-3 py-1.5 font-mono text-xs text-[var(--c1)]
+                            hover:bg-[var(--c4)]/50 hover:border-[var(--c3)] transition-colors shadow-sm
                             disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           RE-ANALYZE
@@ -805,8 +795,8 @@ function Home() {
                           type="button"
                           onClick={() => openDeleteModal(r.gitUrl ?? '', r.ref ?? '')}
                           disabled={deleteLoading}
-                          className="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 font-mono text-xs text-red-300
-                            hover:bg-red-500/20 hover:border-red-400/50 transition-colors
+                          className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 font-mono text-xs text-red-600
+                            hover:bg-red-100 hover:border-red-300 transition-colors
                             disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Trash2 className="w-3.5 h-3.5 inline-block" />
@@ -836,11 +826,11 @@ function Home() {
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && repoToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in-up">
-          <div className="bg-black/90 border border-red-500/30 rounded-lg p-6 max-w-md w-full shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm animate-fade-in-up">
+          <div className="bg-white border border-[var(--c3)]/30 rounded-lg p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-red-400" />
+              <div className="w-10 h-10 rounded-full bg-red-50 border border-red-200 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-500" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
@@ -855,24 +845,24 @@ function Home() {
             <p className="text-sm text-muted-foreground mb-2">
               Are you sure you want to delete all analyses for:
             </p>
-            <div className="bg-black/50 border border-cyan-500/20 rounded-md p-3 mb-6">
-              <p className="font-mono text-sm text-cyan-300 truncate" title={repoToDelete.gitUrl}>
+            <div className="bg-gray-50 border border-[var(--c3)]/30 rounded-md p-3 mb-6">
+              <p className="font-mono text-sm text-[var(--c1)] truncate" title={repoToDelete.gitUrl}>
                 {repoToDelete.gitUrl}
               </p>
-              <p className="font-mono text-xs text-cyan-400/60 mt-1">
+              <p className="font-mono text-xs text-[var(--c2)] mt-1">
                 ref: {repoToDelete.ref || '(default)'}
               </p>
             </div>
 
             {deleteError && (
-              <div className="mb-4 bg-red-950/30 border border-red-500/30 rounded-lg p-3 font-mono">
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 font-mono">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-400" />
-                  <span className="text-red-400 text-xs font-medium uppercase tracking-wider">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className="text-red-700 text-xs font-medium uppercase tracking-wider">
                     Error
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-red-300/80 break-words">{deleteError}</p>
+                <p className="mt-1 text-xs text-red-600 break-words">{deleteError}</p>
               </div>
             )}
 
@@ -881,8 +871,8 @@ function Home() {
                 type="button"
                 onClick={closeDeleteModal}
                 disabled={deleteLoading}
-                className="flex-1 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 font-mono text-sm text-cyan-300
-                  hover:bg-cyan-500/15 hover:border-cyan-400/50 transition-colors
+                className="flex-1 rounded-md border border-[var(--c3)]/30 bg-white px-4 py-2 font-mono text-sm text-foreground
+                  hover:bg-[var(--c4)]/50 hover:border-[var(--c3)] transition-colors shadow-sm
                   disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 CANCEL
@@ -891,8 +881,8 @@ function Home() {
                 type="button"
                 onClick={confirmDelete}
                 disabled={deleteLoading}
-                className="flex-1 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-2 font-mono text-sm text-red-300
-                  hover:bg-red-500/20 hover:border-red-400/50 transition-colors
+                className="flex-1 rounded-md border border-red-200 bg-red-600 px-4 py-2 font-mono text-sm text-white
+                  hover:bg-red-700 transition-colors shadow-sm
                   disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {deleteLoading ? (

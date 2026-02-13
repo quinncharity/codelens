@@ -19,7 +19,7 @@ export const Route = createRootRoute({
       },
       {
         name: 'color-scheme',
-        content: 'dark',
+        content: 'light',
       },
       {
         title: 'CodeLens',
@@ -38,7 +38,7 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <HeadContent />
       </head>
