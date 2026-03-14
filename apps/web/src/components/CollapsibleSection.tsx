@@ -8,6 +8,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { ExpandCollapseContext } from '@/components/ExpandCollapseProvider'
+import { ZoomContext } from '@/components/ZoomContext'
 
 interface CollapsibleSectionProps {
   title: string
@@ -25,6 +27,23 @@ export function CollapsibleSection({
   className,
 }: CollapsibleSectionProps) {
   const [open, setOpen] = React.useState(defaultOpen)
+  const expandCollapseCtx = React.useContext(ExpandCollapseContext)
+  const zoomCtx = React.useContext(ZoomContext)
+  const prevToggle = React.useRef(expandCollapseCtx?.globalToggle ?? 0)
+
+  React.useEffect(() => {
+    if (!expandCollapseCtx) return
+    if (expandCollapseCtx.globalToggle !== prevToggle.current) {
+      prevToggle.current = expandCollapseCtx.globalToggle
+      setOpen(expandCollapseCtx.expandAll)
+    }
+  }, [expandCollapseCtx?.globalToggle, expandCollapseCtx?.expandAll, expandCollapseCtx])
+
+  React.useEffect(() => {
+    if (zoomCtx?.zoomLevel === 3) {
+      setOpen(true)
+    }
+  }, [zoomCtx?.zoomLevel])
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={className}>
