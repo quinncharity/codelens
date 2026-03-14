@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, ChevronsDownUp, ChevronsUpDown, RefreshCw } from 'lucide-react'
 import type {
   GetAnalysisResponse,
   Framework,
@@ -24,9 +24,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { CollapsibleSection } from '@/components/CollapsibleSection'
 import { ExpandableRow } from '@/components/ExpandableRow'
 import { ConfidenceIndicator } from '@/components/ConfidenceIndicator'
+import {
+  ExpandCollapseProvider,
+  useExpandCollapse,
+} from '@/components/ExpandCollapseProvider'
+import { ZoomProvider, useZoom } from '@/components/ZoomContext'
+import { ZoomControl } from '@/components/ZoomControl'
+import { ArchitectureDiagram } from '@/components/ArchitectureDiagram'
 
 export const Route = createFileRoute('/analysis/$id')({
   component: AnalysisPage,
@@ -76,6 +88,76 @@ function AnalysisPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, result?.status])
 
+  return (
+    <ZoomProvider>
+      <ExpandCollapseProvider>
+        <AnalysisPageInner
+          id={id}
+          loading={loading}
+          error={error}
+          result={result}
+          isRunning={isRunning}
+          onRefresh={load}
+        />
+      </ExpandCollapseProvider>
+    </ZoomProvider>
+  )
+}
+
+function AnalysisPageInner({
+  id,
+  loading,
+  error,
+  result,
+  isRunning,
+  onRefresh,
+}: {
+  id: string
+  loading: boolean
+  error: string | null
+  result: GetAnalysisResponse | null
+  isRunning: boolean
+  onRefresh: () => void
+}) {
+  const { expandAll, expandAllSections, collapseAll } = useExpandCollapse()
+  const { zoomLevel, setZoomLevel } = useZoom()
+
+  const handleToggleAll = () => {
+    if (expandAll) {
+      collapseAll()
+    } else {
+      expandAllSections()
+    }
+  }
+
+  // When switching to level 3, expand all; when switching to level 2 from 3, collapse
+  const prevZoom = useRef(zoomLevel)
+  useEffect(() => {
+    if (zoomLevel === 3 && prevZoom.current !== 3) {
+      expandAllSections()
+    } else if (zoomLevel === 2 && prevZoom.current === 3) {
+      collapseAll()
+    }
+    prevZoom.current = zoomLevel
+  }, [zoomLevel, expandAllSections, collapseAll])
+
+  // Handle node click from ArchitectureDiagram — switch to level 2 and scroll
+  const handleDiagramNodeClick = useCallback(
+    (serviceName: string) => {
+      setZoomLevel(2)
+      // Small delay to let rendering catch up
+      setTimeout(() => {
+        const el = document.getElementById(`service-${serviceName}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('highlight-pulse')
+          setTimeout(() => el.classList.remove('highlight-pulse'), 2000)
+        }
+      }, 100)
+    },
+    [setZoomLevel],
+  )
+
   const statusVariant: 'default' | 'secondary' | 'destructive' | 'outline' =
     result?.status === 'FAILED'
       ? 'destructive'
@@ -99,6 +181,9 @@ function AnalysisPage() {
       ),
   )
 
+  const gitUrl = result?.gitUrl ?? ''
+  const ref = result?.ref ?? ''
+
   return (
     <main className="container py-10">
       <div className="mx-auto max-w-4xl">
@@ -109,7 +194,20 @@ function AnalysisPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={load} disabled={loading}>
+            <ZoomControl />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleAll}
+              title={expandAll ? 'Collapse All' : 'Expand All'}
+            >
+              {expandAll ? (
+                <><ChevronsDownUp className="h-4 w-4" /> Collapse All</>
+              ) : (
+                <><ChevronsUpDown className="h-4 w-4" /> Expand All</>
+              )}
+            </Button>
+            <Button variant="outline" onClick={onRefresh} disabled={loading}>
               <RefreshCw />
               Refresh
             </Button>
@@ -122,7 +220,7 @@ function AnalysisPage() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4">
+        <div className="mt-6 grid gap-4 zoom-transition">
           {loading ? (
             <Card>
               <CardHeader>
@@ -175,106 +273,113 @@ function AnalysisPage() {
                 </CardContent>
               </Card>
 
-              {/* Architecture */}
-              {result.services?.length ? (
-                <CollapsibleSection
-                  title="Architecture"
-                  count={result.services.length}
-                  defaultOpen
-                >
-                  <ArchitectureView services={result.services} />
-                </CollapsibleSection>
-              ) : null}
-
-              {/* Frameworks */}
-              <CollapsibleSection
-                title="Frameworks"
-                count={result.frameworks?.length ?? 0}
-                defaultOpen={!!result.frameworks?.length}
-              >
-                {result.frameworks?.length ? (
-                  <FrameworksTable frameworks={result.frameworks} />
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    No frameworks detected yet.
-                  </div>
-                )}
-              </CollapsibleSection>
-
-              {/* Architecture Patterns */}
-              <PatternSection
-                title="Architecture Patterns"
-                patterns={patternsFor('architecture')}
-                emptyText="No architecture patterns detected yet."
-              />
-
-              {/* Implementation Patterns */}
-              <PatternSection
-                title="Implementation Patterns"
-                patterns={patternsFor('implementation')}
-                emptyText="No implementation patterns detected yet."
-              />
-
-              {/* Code Quality */}
-              <PatternSection
-                title="Code Quality"
-                patterns={patternsFor('quality')}
-                emptyText="No code quality findings detected yet."
-              />
-
-              {/* AI Rules */}
-              <PatternSection
-                title="AI Rules"
-                patterns={patternsFor('ai_rule')}
-                emptyText="No AI/agent-specific rules detected yet."
-              />
-
-              {/* Other Patterns */}
-              {otherPatterns.length > 0 && (
-                <PatternSection
-                  title="Other Patterns"
-                  patterns={otherPatterns}
-                  emptyText="No other patterns detected."
-                />
-              )}
-
-              {/* Insights */}
-              {result.insights?.length ? (
-<<<<<<< HEAD
+              {/* Level 1: Architecture Diagram only */}
+              {zoomLevel === 1 && result.services?.length ? (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Insights</CardTitle>
+                    <CardTitle>Dependency Graph</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid gap-3">
-                    {result.insights.map((i: any, idx: number) => (
-                      <div
-                        key={`${i.title}:${idx}`}
-                        className="rounded-md border border-[var(--c3)]/30 bg-[var(--c4)]/40 p-3"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-sm font-medium">{i.title}</div>
-                          {i.category ? (
-                            <Badge variant="secondary" className="font-mono">
-                              {String(i.category).toUpperCase()}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          {i.description}
-                        </div>
-                      </div>
-                    ))}
+                  <CardContent>
+                    <ArchitectureDiagram
+                      services={result.services}
+                      onNodeClick={handleDiagramNodeClick}
+                    />
                   </CardContent>
                 </Card>
-=======
-                <CollapsibleSection
-                  title="Insights"
-                  count={result.insights.length}
-                  defaultOpen
-                >
-                  <InsightsList insights={result.insights} />
-                </CollapsibleSection>
->>>>>>> 2f9fc40 (Add Radix UI Collapsible Component and Styles)
+              ) : null}
+
+              {/* Level 2 & 3: Full content */}
+              {zoomLevel >= 2 ? (
+                <>
+                  {/* Architecture */}
+                  {result.services?.length ? (
+                    <CollapsibleSection
+                      title="Architecture"
+                      count={result.services.length}
+                      defaultOpen
+                    >
+                      <ArchitectureView
+                        services={result.services}
+                        gitUrl={gitUrl}
+                        gitRef={ref}
+                        showFullDetail={zoomLevel === 3}
+                      />
+                    </CollapsibleSection>
+                  ) : null}
+
+                  {/* Frameworks */}
+                  <CollapsibleSection
+                    title="Frameworks"
+                    count={result.frameworks?.length ?? 0}
+                    defaultOpen={!!result.frameworks?.length}
+                  >
+                    {result.frameworks?.length ? (
+                      <FrameworksTable frameworks={result.frameworks} />
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        No frameworks detected yet.
+                      </div>
+                    )}
+                  </CollapsibleSection>
+
+                  {/* Architecture Patterns */}
+                  <PatternSection
+                    title="Architecture Patterns"
+                    patterns={patternsFor('architecture')}
+                    emptyText="No architecture patterns detected yet."
+                    gitUrl={gitUrl}
+                    gitRef={ref}
+                  />
+
+                  {/* Implementation Patterns */}
+                  <PatternSection
+                    title="Implementation Patterns"
+                    patterns={patternsFor('implementation')}
+                    emptyText="No implementation patterns detected yet."
+                    gitUrl={gitUrl}
+                    gitRef={ref}
+                  />
+
+                  {/* Code Quality */}
+                  <PatternSection
+                    title="Code Quality"
+                    patterns={patternsFor('quality')}
+                    emptyText="No code quality findings detected yet."
+                    gitUrl={gitUrl}
+                    gitRef={ref}
+                  />
+
+                  {/* AI Rules */}
+                  <PatternSection
+                    title="AI Rules"
+                    patterns={patternsFor('ai_rule')}
+                    emptyText="No AI/agent-specific rules detected yet."
+                    gitUrl={gitUrl}
+                    gitRef={ref}
+                  />
+
+                  {/* Other Patterns */}
+                  {otherPatterns.length > 0 && (
+                    <PatternSection
+                      title="Other Patterns"
+                      patterns={otherPatterns}
+                      emptyText="No other patterns detected."
+                      gitUrl={gitUrl}
+                      gitRef={ref}
+                    />
+                  )}
+
+                  {/* Insights */}
+                  {result.insights?.length ? (
+                    <CollapsibleSection
+                      title="Insights"
+                      count={result.insights.length}
+                      defaultOpen
+                    >
+                      <InsightsList insights={result.insights} />
+                    </CollapsibleSection>
+                  ) : null}
+                </>
               ) : null}
             </>
           ) : null}
@@ -336,10 +441,14 @@ function PatternSection({
   title,
   patterns,
   emptyText,
+  gitUrl,
+  gitRef,
 }: {
   title: string
   patterns: Pattern[]
   emptyText: string
+  gitUrl: string
+  gitRef: string
 }) {
   return (
     <CollapsibleSection
@@ -348,7 +457,7 @@ function PatternSection({
       defaultOpen={patterns.length > 0}
     >
       {patterns.length > 0 ? (
-        <PatternsTable patterns={patterns} />
+        <PatternsTable patterns={patterns} gitUrl={gitUrl} gitRef={gitRef} />
       ) : (
         <div className="text-sm text-muted-foreground">{emptyText}</div>
       )}
@@ -356,7 +465,15 @@ function PatternSection({
   )
 }
 
-function PatternsTable({ patterns }: { patterns: Pattern[] }) {
+function PatternsTable({
+  patterns,
+  gitUrl,
+  gitRef,
+}: {
+  patterns: Pattern[]
+  gitUrl: string
+  gitRef: string
+}) {
   return (
     <Table>
       <TableHeader>
@@ -386,7 +503,11 @@ function PatternsTable({ patterns }: { patterns: Pattern[] }) {
                     {p.description}
                   </p>
                 )}
-                <EvidencePathList paths={p.evidencePaths} />
+                <EvidencePathList
+                  paths={p.evidencePaths}
+                  gitUrl={gitUrl}
+                  gitRef={gitRef}
+                />
                 <Detail
                   label="Confidence"
                   value={
@@ -402,7 +523,28 @@ function PatternsTable({ patterns }: { patterns: Pattern[] }) {
   )
 }
 
-function EvidencePathList({ paths }: { paths: string[] }) {
+function buildGitHubFileUrl(
+  gitUrl: string,
+  ref: string,
+  filePath: string,
+): string | null {
+  if (!gitUrl) return null
+  const cleaned = gitUrl
+    .replace(/\.git$/, '')
+    .replace(/^git@github\.com:/, 'https://github.com/')
+  const effectiveRef = ref || 'main'
+  return `${cleaned}/blob/${effectiveRef}/${filePath}`
+}
+
+function EvidencePathList({
+  paths,
+  gitUrl,
+  gitRef,
+}: {
+  paths: string[]
+  gitUrl: string
+  gitRef: string
+}) {
   const filtered = paths.filter(Boolean)
   if (!filtered.length) return null
 
@@ -412,11 +554,24 @@ function EvidencePathList({ paths }: { paths: string[] }) {
         Evidence
       </span>
       <div className="evidence-path-list mt-1">
-        {filtered.map((p) => (
-          <div key={p} className="evidence-path">
-            {p}
-          </div>
-        ))}
+        {filtered.map((p) => {
+          const url = buildGitHubFileUrl(gitUrl, gitRef, p)
+          return url ? (
+            <a
+              key={p}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="evidence-path evidence-path-link"
+            >
+              {p}
+            </a>
+          ) : (
+            <div key={p} className="evidence-path">
+              {p}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -436,161 +591,307 @@ function InsightCard({ insight }: { insight: Insight }) {
   const [open, setOpen] = useState(false)
 
   return (
-    <div
-      className="rounded-md border border-border/60 bg-card/40 transition-colors hover:border-border"
-    >
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 p-3 text-left"
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium">{insight.title}</span>
-          {insight.category && (
-            <Badge variant="secondary" className="font-mono text-[0.65rem]">
-              {insight.category.toUpperCase()}
-            </Badge>
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded-md border border-border/60 bg-card/40 transition-colors hover:border-border">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 p-3 text-left"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium">{insight.title}</span>
+              {insight.category && (
+                <Badge variant="secondary" className="font-mono text-[0.65rem]">
+                  {insight.category.toUpperCase()}
+                </Badge>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {open ? 'collapse' : 'expand'}
+            </span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="collapsible-content">
+          {insight.description && (
+            <div className="border-t border-border/40 px-3 pb-3 pt-2 text-sm leading-relaxed text-muted-foreground">
+              {insight.description}
+            </div>
           )}
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {open ? 'collapse' : 'expand'}
-        </span>
-      </button>
-      {open && insight.description && (
-        <div className="border-t border-border/40 px-3 pb-3 pt-2 text-sm leading-relaxed text-muted-foreground animate-fade-in-up">
-          {insight.description}
-        </div>
-      )}
-    </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   )
 }
 
-function ArchitectureView({ services }: { services: ServiceModule[] }) {
+const LAYER_ORDER = [
+  'presentation',
+  'business',
+  'data',
+  'config',
+  'test',
+  'infra',
+  'unknown',
+] as const
+
+function ArchitectureView({
+  services,
+  gitUrl,
+  gitRef,
+  showFullDetail,
+}: {
+  services: ServiceModule[]
+  gitUrl: string
+  gitRef: string
+  showFullDetail: boolean
+}) {
   return (
     <div className="grid gap-3">
       {services.map((svc) => (
-        <ServiceCard key={svc.name} service={svc} />
+        <ServiceCard
+          key={svc.name}
+          service={svc}
+          gitUrl={gitUrl}
+          gitRef={gitRef}
+          showFullDetail={showFullDetail}
+        />
       ))}
     </div>
   )
 }
 
-function ServiceCard({ service }: { service: ServiceModule }) {
-  const [open, setOpen] = useState(false)
+function scrollToService(name: string) {
+  const el = document.getElementById(`service-${name}`)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('highlight-pulse')
+    setTimeout(() => el.classList.remove('highlight-pulse'), 2000)
+  }
+}
+
+function ServiceCard({
+  service,
+  gitUrl,
+  gitRef,
+  showFullDetail,
+}: {
+  service: ServiceModule
+  gitUrl: string
+  gitRef: string
+  showFullDetail: boolean
+}) {
+  const [open, setOpen] = useState(showFullDetail)
 
   const moduleTypeLabel = (service.moduleType || 'module').toUpperCase()
 
+  // Group key files by layer
+  const filesByLayer = useMemo(() => {
+    const grouped: Record<string, FileDetail[]> = {}
+    for (const f of service.keyFiles ?? []) {
+      const layer = (f.layer || 'unknown').toLowerCase()
+      if (!grouped[layer]) grouped[layer] = []
+      grouped[layer].push(f)
+    }
+    return grouped
+  }, [service.keyFiles])
+
+  const sortedLayers = LAYER_ORDER.filter((l) => filesByLayer[l]?.length)
+
   return (
-    <div className="rounded-md border border-border/60 bg-card/40 transition-colors hover:border-border">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 p-4 text-left"
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div
+        id={`service-${service.name}`}
+        className="rounded-md border border-border/60 bg-card/40 transition-colors hover:border-border"
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold">{service.name}</span>
-          <Badge variant="secondary" className="font-mono text-[0.65rem]">
-            {moduleTypeLabel}
-          </Badge>
-          {service.keyFiles?.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {service.keyFiles.length} file{service.keyFiles.length !== 1 ? 's' : ''}
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 p-4 text-left"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold">{service.name}</span>
+              <Badge variant="secondary" className="font-mono text-[0.65rem]">
+                {moduleTypeLabel}
+              </Badge>
+              {service.keyFiles?.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {service.keyFiles.length} file{service.keyFiles.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {open ? 'collapse' : 'expand'}
             </span>
-          )}
-        </div>
-        <span className="text-xs text-muted-foreground shrink-0">
-          {open ? 'collapse' : 'expand'}
-        </span>
-      </button>
+          </button>
+        </CollapsibleTrigger>
 
-      {open && (
-        <div className="border-t border-border/40 px-4 pb-4 pt-3 space-y-3 animate-fade-in-up">
-          {service.description && (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {service.description}
-            </p>
-          )}
+        <CollapsibleContent className="collapsible-content">
+          <div className="border-t border-border/40 px-4 pb-4 pt-3 space-y-3">
+            {service.description && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {service.description}
+              </p>
+            )}
 
-          {service.entryPoints?.length > 0 && (
-            <div>
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                Entry Points
-              </span>
-              <div className="evidence-path-list mt-1">
-                {service.entryPoints.map((ep: string) => (
-                  <div key={ep} className="evidence-path">
-                    {ep}
-                  </div>
+            {service.entryPoints?.length > 0 && (
+              <div>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                  Entry Points
+                </span>
+                <div className="evidence-path-list mt-1">
+                  {service.entryPoints.map((ep: string) => {
+                    const url = buildGitHubFileUrl(gitUrl, gitRef, ep)
+                    return url ? (
+                      <a
+                        key={ep}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="evidence-path evidence-path-link"
+                      >
+                        {ep}
+                      </a>
+                    ) : (
+                      <div key={ep} className="evidence-path">
+                        {ep}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {service.dependsOn?.length > 0 && (
+              <div>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                  Depends On
+                </span>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {service.dependsOn.map((dep: string) => (
+                    <Badge
+                      key={dep}
+                      variant="outline"
+                      className="font-mono text-xs cursor-pointer hover:bg-secondary/50 transition-colors"
+                      onClick={() => scrollToService(dep)}
+                    >
+                      {dep}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sortedLayers.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
+                  Key Files
+                </span>
+                {sortedLayers.map((layer) => (
+                  <LayerFileGroup
+                    key={layer}
+                    layer={layer}
+                    files={filesByLayer[layer]}
+                    gitUrl={gitUrl}
+                    gitRef={gitRef}
+                    showFullDetail={showFullDetail}
+                  />
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  )
+}
 
-          {service.dependsOn?.length > 0 && (
-            <div>
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                Depends On
-              </span>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {service.dependsOn.map((dep: string) => (
-                  <Badge key={dep} variant="outline" className="font-mono text-xs">
-                    {dep}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+function LayerFileGroup({
+  layer,
+  files,
+  gitUrl,
+  gitRef,
+  showFullDetail,
+}: {
+  layer: string
+  files: FileDetail[]
+  gitUrl: string
+  gitRef: string
+  showFullDetail: boolean
+}) {
+  const [open, setOpen] = useState(showFullDetail)
 
-          {service.keyFiles?.length > 0 && (
-            <div>
-              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-                Key Files
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="rounded border border-border/40 bg-card/20">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-secondary/20 transition-colors rounded"
+          >
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-[0.6rem]">
+                {layer.toUpperCase()}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {files.length} file{files.length !== 1 ? 's' : ''}
               </span>
-              <div className="mt-1">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-6" />
-                      <TableHead>Path</TableHead>
-                      <TableHead>Layer</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {service.keyFiles.map((f: FileDetail) => (
-                      <ExpandableRow
-                        key={f.path}
-                        columnCount={2}
-                        cells={[
-                          <TableCell key="path" className="font-mono text-xs">
-                            {f.path}
-                          </TableCell>,
-                          <TableCell key="layer">
-                            <Badge variant="outline" className="font-mono text-[0.6rem]">
-                              {(f.layer || 'unknown').toUpperCase()}
-                            </Badge>
-                          </TableCell>,
-                        ]}
-                        detail={
-                          f.purpose ? (
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                              {f.purpose}
-                            </p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {open ? '-' : '+'}
+            </span>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="collapsible-content">
+          <div className="px-3 pb-2">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-6" />
+                  <TableHead>Path</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {files.map((f: FileDetail) => {
+                  const url = buildGitHubFileUrl(gitUrl, gitRef, f.path)
+                  return (
+                    <ExpandableRow
+                      key={f.path}
+                      columnCount={1}
+                      cells={[
+                        <TableCell key="path" className="font-mono text-xs">
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[var(--c2)] hover:underline"
+                            >
+                              {f.path}
+                            </a>
                           ) : (
-                            <span className="text-sm text-muted-foreground/50">
-                              No description available.
-                            </span>
-                          )
-                        }
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                            f.path
+                          )}
+                        </TableCell>,
+                      ]}
+                      detail={
+                        f.purpose ? (
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {f.purpose}
+                          </p>
+                        ) : (
+                          <span className="text-sm text-muted-foreground/50">
+                            No description available.
+                          </span>
+                        )
+                      }
+                    />
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   )
 }
 
