@@ -240,6 +240,11 @@ export declare class GetAnalysisResponse extends Message<GetAnalysisResponse> {
    */
   error: string;
 
+  /**
+   * @generated from field: repeated codelens.v1.ServiceModule services = 10;
+   */
+  services: ServiceModule[];
+
   constructor(data?: PartialMessage<GetAnalysisResponse>);
 
   static readonly runtime: typeof proto3;
@@ -533,5 +538,94 @@ export declare class Insight extends Message<Insight> {
   static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Insight;
 
   static equals(a: Insight | PlainMessage<Insight> | undefined, b: Insight | PlainMessage<Insight> | undefined): boolean;
+}
+
+/**
+ * @generated from message codelens.v1.FileDetail
+ */
+export declare class FileDetail extends Message<FileDetail> {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * @generated from field: string purpose = 2;
+   */
+  purpose: string;
+
+  /**
+   * Architectural layer: presentation, business, data, config, test, infra, unknown.
+   *
+   * @generated from field: string layer = 3;
+   */
+  layer: string;
+
+  constructor(data?: PartialMessage<FileDetail>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.FileDetail";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FileDetail;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FileDetail;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FileDetail;
+
+  static equals(a: FileDetail | PlainMessage<FileDetail> | undefined, b: FileDetail | PlainMessage<FileDetail> | undefined): boolean;
+}
+
+/**
+ * @generated from message codelens.v1.ServiceModule
+ */
+export declare class ServiceModule extends Message<ServiceModule> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string description = 2;
+   */
+  description: string;
+
+  /**
+   * Type of module: service, module, package, library.
+   *
+   * @generated from field: string module_type = 3;
+   */
+  moduleType: string;
+
+  /**
+   * @generated from field: repeated string entry_points = 4;
+   */
+  entryPoints: string[];
+
+  /**
+   * @generated from field: repeated codelens.v1.FileDetail key_files = 5;
+   */
+  keyFiles: FileDetail[];
+
+  /**
+   * Names of other ServiceModules this one depends on.
+   *
+   * @generated from field: repeated string depends_on = 6;
+   */
+  dependsOn: string[];
+
+  constructor(data?: PartialMessage<ServiceModule>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.ServiceModule";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ServiceModule;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ServiceModule;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ServiceModule;
+
+  static equals(a: ServiceModule | PlainMessage<ServiceModule> | undefined, b: ServiceModule | PlainMessage<ServiceModule> | undefined): boolean;
 }
 

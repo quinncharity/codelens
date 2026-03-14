@@ -15,7 +15,7 @@ from analyzer.analysis.rlm_agents import SUB_AGENTS, SubAgentConfig
 from analyzer.analysis.repo_snapshot import build_repo_snapshot
 from analyzer.analysis.rlm_parse import parse_analysis_result
 from analyzer.analysis.rlm_streaming import run_sub_agent
-from analyzer.analysis.rlm_tools import get_file_content, list_files, search_files
+from analyzer.analysis.rlm_tools import get_file_content, list_files, make_read_repo_file, search_files
 from analyzer.models import AnalysisResultData
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,8 @@ class RLMEngine:
             agent="engine",
             kind="PHASE_END",
         )
+
+        read_repo_file = make_read_repo_file(repo_root)
 
         await emit("ANALYZE", 0.28, "Configuring DSPy", agent="engine", kind="PHASE_START")
         temperature = _env_float("CODELENS_DSPY_TEMPERATURE", 0.0)
@@ -131,7 +133,7 @@ class RLMEngine:
                     verbose=bool(verbose),
                     sub_lm=sub_lm,
                     interpreter=interpreter,
-                    tools=[list_files, get_file_content, search_files],
+                    tools=[list_files, get_file_content, search_files, read_repo_file],
                 )
                 try:
                     sig_cls = getattr(sig_mod, agent_cfg.signature_cls)
@@ -241,12 +243,14 @@ class RLMEngine:
         frameworks = results.get("frameworks", [])
         patterns = results.get("patterns", [])
         insights = results.get("insights", [])
+        services = results.get("services", [])
 
         result = parse_analysis_result(
             summary=summary,
             frameworks=frameworks,
             patterns=patterns,
             insights=insights,
+            services=services,
         )
         await emit("ANALYZE", 0.90, "Analysis complete", agent="engine", kind="PHASE_END")
         return result

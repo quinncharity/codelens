@@ -63,6 +63,8 @@ message GetAnalysisResponse {
 
   string status = 8; // SUCCEEDED, FAILED, RUNNING
   string error = 9;
+
+  repeated ServiceModule services = 10;
 }
 
 message ListReposRequest {
@@ -113,4 +115,22 @@ message Insight {
   string category = 1; // architecture, quality, risk
   string title = 2;
   string description = 3;
+}
+
+message FileDetail {
+  string path = 1;
+  string purpose = 2;
+  // Architectural layer: presentation, business, data, config, test, infra, unknown.
+  string layer = 3;
+}
+
+message ServiceModule {
+  string name = 1;
+  string description = 2;
+  // Type of module: service, module, package, library.
+  string module_type = 3;
+  repeated string entry_points = 4;
+  repeated FileDetail key_files = 5;
+  // Names of other ServiceModules this one depends on.
+  repeated string depends_on = 6;
 }

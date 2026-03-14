@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from analyzer.models import AnalysisResultData, Framework, Insight, Pattern
+from analyzer.models import AnalysisResultData, Framework, Insight, Pattern, ServiceModule
 
 
 def _as_str(v: Any) -> str:
@@ -27,6 +27,7 @@ def parse_analysis_result(
     frameworks: Any,
     patterns: Any,
     insights: Any,
+    services: Any = None,
 ) -> AnalysisResultData:
     """
     Validate/normalize the RLM outputs into a typed AnalysisResultData.
@@ -69,6 +70,17 @@ def parse_analysis_result(
             continue
         out_insights.append(ins)
 
+    services_raw = _require_list(services, field="services")
+    out_services: list[ServiceModule] = []
+    for item in services_raw:
+        try:
+            svc = item if isinstance(item, ServiceModule) else ServiceModule.model_validate(item)
+        except Exception:
+            continue
+        if not svc.name.strip():
+            continue
+        out_services.append(svc)
+
     out_frameworks.sort(key=lambda x: (-x.confidence, x.name))
     out_patterns.sort(key=lambda x: (-x.confidence, x.name))
 
@@ -77,5 +89,6 @@ def parse_analysis_result(
         frameworks=out_frameworks,
         patterns=out_patterns,
         insights=out_insights,
+        services=out_services,
     )
 

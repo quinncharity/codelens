@@ -159,11 +159,89 @@ class Insight(BaseModel):
         return _as_str(v).strip()
 
 
+_ALLOWED_FILE_LAYERS: set[str] = {
+    "presentation",
+    "business",
+    "data",
+    "config",
+    "test",
+    "infra",
+    "unknown",
+}
+
+_ALLOWED_MODULE_TYPES: set[str] = {
+    "service",
+    "module",
+    "package",
+    "library",
+}
+
+
+class FileDetail(BaseModel):
+    path: str = ""
+    purpose: str = ""
+    layer: str = "unknown"
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    @field_validator("path", "purpose", mode="before")
+    @classmethod
+    def _coerce_str_fields(cls, v: Any) -> str:
+        return _as_str(v).strip()
+
+    @field_validator("layer", mode="before")
+    @classmethod
+    def _normalize_layer(cls, v: Any) -> str:
+        layer = _as_str(v).strip().lower()
+        if not layer or layer not in _ALLOWED_FILE_LAYERS:
+            return "unknown"
+        return layer
+
+
+class ServiceModule(BaseModel):
+    name: str = ""
+    description: str = ""
+    module_type: str = "module"
+    entry_points: list[str] = Field(default_factory=list)
+    key_files: list[FileDetail] = Field(default_factory=list)
+    depends_on: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def _coerce_str_fields(cls, v: Any) -> str:
+        return _as_str(v).strip()
+
+    @field_validator("module_type", mode="before")
+    @classmethod
+    def _normalize_module_type(cls, v: Any) -> str:
+        mt = _as_str(v).strip().lower()
+        if not mt or mt not in _ALLOWED_MODULE_TYPES:
+            return "module"
+        return mt
+
+    @field_validator("entry_points", mode="before")
+    @classmethod
+    def _normalize_entry_points(cls, v: Any) -> list[str]:
+        return _normalize_evidence_paths(v)
+
+    @field_validator("depends_on", mode="before")
+    @classmethod
+    def _normalize_depends_on(cls, v: Any) -> list[str]:
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            return []
+        return [_as_str(x).strip() for x in v if _as_str(x).strip()][:20]
+
+
 class AnalysisResultData(BaseModel):
     summary: str = ""
     frameworks: list[Framework] = Field(default_factory=list)
     patterns: list[Pattern] = Field(default_factory=list)
     insights: list[Insight] = Field(default_factory=list)
+    services: list[ServiceModule] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True, extra="ignore")
 

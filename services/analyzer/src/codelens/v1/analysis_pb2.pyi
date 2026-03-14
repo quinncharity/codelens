@@ -55,7 +55,7 @@ class GetAnalysisRequest(_message.Message):
     def __init__(self, id: _Optional[str] = ...) -> None: ...
 
 class GetAnalysisResponse(_message.Message):
-    __slots__ = ("id", "git_url", "ref", "summary", "frameworks", "patterns", "insights", "status", "error")
+    __slots__ = ("id", "git_url", "ref", "summary", "frameworks", "patterns", "insights", "status", "error", "services")
     ID_FIELD_NUMBER: _ClassVar[int]
     GIT_URL_FIELD_NUMBER: _ClassVar[int]
     REF_FIELD_NUMBER: _ClassVar[int]
@@ -65,6 +65,7 @@ class GetAnalysisResponse(_message.Message):
     INSIGHTS_FIELD_NUMBER: _ClassVar[int]
     STATUS_FIELD_NUMBER: _ClassVar[int]
     ERROR_FIELD_NUMBER: _ClassVar[int]
+    SERVICES_FIELD_NUMBER: _ClassVar[int]
     id: str
     git_url: str
     ref: str
@@ -74,7 +75,8 @@ class GetAnalysisResponse(_message.Message):
     insights: _containers.RepeatedCompositeFieldContainer[Insight]
     status: str
     error: str
-    def __init__(self, id: _Optional[str] = ..., git_url: _Optional[str] = ..., ref: _Optional[str] = ..., summary: _Optional[str] = ..., frameworks: _Optional[_Iterable[_Union[Framework, _Mapping]]] = ..., patterns: _Optional[_Iterable[_Union[Pattern, _Mapping]]] = ..., insights: _Optional[_Iterable[_Union[Insight, _Mapping]]] = ..., status: _Optional[str] = ..., error: _Optional[str] = ...) -> None: ...
+    services: _containers.RepeatedCompositeFieldContainer[ServiceModule]
+    def __init__(self, id: _Optional[str] = ..., git_url: _Optional[str] = ..., ref: _Optional[str] = ..., summary: _Optional[str] = ..., frameworks: _Optional[_Iterable[_Union[Framework, _Mapping]]] = ..., patterns: _Optional[_Iterable[_Union[Pattern, _Mapping]]] = ..., insights: _Optional[_Iterable[_Union[Insight, _Mapping]]] = ..., status: _Optional[str] = ..., error: _Optional[str] = ..., services: _Optional[_Iterable[_Union[ServiceModule, _Mapping]]] = ...) -> None: ...
 
 class ListReposRequest(_message.Message):
     __slots__ = ("limit", "offset")
@@ -153,3 +155,29 @@ class Insight(_message.Message):
     title: str
     description: str
     def __init__(self, category: _Optional[str] = ..., title: _Optional[str] = ..., description: _Optional[str] = ...) -> None: ...
+
+class FileDetail(_message.Message):
+    __slots__ = ("path", "purpose", "layer")
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    PURPOSE_FIELD_NUMBER: _ClassVar[int]
+    LAYER_FIELD_NUMBER: _ClassVar[int]
+    path: str
+    purpose: str
+    layer: str
+    def __init__(self, path: _Optional[str] = ..., purpose: _Optional[str] = ..., layer: _Optional[str] = ...) -> None: ...
+
+class ServiceModule(_message.Message):
+    __slots__ = ("name", "description", "module_type", "entry_points", "key_files", "depends_on")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
+    MODULE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    ENTRY_POINTS_FIELD_NUMBER: _ClassVar[int]
+    KEY_FILES_FIELD_NUMBER: _ClassVar[int]
+    DEPENDS_ON_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    description: str
+    module_type: str
+    entry_points: _containers.RepeatedScalarFieldContainer[str]
+    key_files: _containers.RepeatedCompositeFieldContainer[FileDetail]
+    depends_on: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., module_type: _Optional[str] = ..., entry_points: _Optional[_Iterable[str]] = ..., key_files: _Optional[_Iterable[_Union[FileDetail, _Mapping]]] = ..., depends_on: _Optional[_Iterable[str]] = ...) -> None: ...

@@ -18,9 +18,11 @@ _TOOLING_GUIDE = (
     "- list_files(repo_snapshot, pattern=None) -> newline-separated paths (capped)\n"
     "- get_file_content(repo_snapshot, path) -> file content or NOT_FOUND\n"
     "- search_files(repo_snapshot, keyword) -> JSON array of matches\n"
+    "- read_repo_file(path) -> read ANY file from the repo (up to 50KB)\n"
     "- llm_query(prompt) -> ask a sub-LLM to analyze a chunk\n"
     "\n"
     "Tip: `repo_snapshot` is already a Python dict. Pass it directly into tools.\n"
+    "Tip: Use read_repo_file(path) when you need to read files not in the snapshot.\n"
 )
 
 
@@ -121,5 +123,44 @@ SUB_AGENTS: list[SubAgentConfig] = [
         ),
         max_iterations=15,
         max_llm_calls=15,
+    ),
+    SubAgentConfig(
+        name="architecture",
+        signature_cls="ArchitectureSignature",
+        output_field="services",
+        query=(
+            "You are CodeLens. Given `repo_snapshot`, map the architecture of this repository\n"
+            "into logical services, modules, packages, or libraries. Go DEEP: read actual source\n"
+            "files to understand what each part of the codebase does at the file level.\n\n"
+            f"{_TOOLING_GUIDE}\n"
+            "RULES:\n"
+            "- Identify every distinct logical service/module/package/library in the repo.\n"
+            "- For each, list key files with their purpose and architectural layer.\n"
+            "- Trace dependencies between modules (which module calls/imports which).\n"
+            "- Use read_repo_file(path) aggressively to read source files beyond the snapshot.\n"
+            "- Be thorough: read entry points, routers, handlers, models, configs.\n\n"
+            "RECOMMENDED STRATEGY:\n"
+            "1. Use list_files() to map the full directory structure.\n"
+            "2. Identify top-level directories that represent distinct services/packages.\n"
+            "3. For each service, use read_repo_file() to read key source files (entry points,\n"
+            "   routers, models, handlers, configs) and understand what they do.\n"
+            "4. Trace import/dependency relationships between modules by reading source.\n"
+            "5. Classify each key file by architectural layer:\n"
+            "   presentation (UI, routes, views, templates),\n"
+            "   business (core logic, services, handlers),\n"
+            "   data (models, stores, repositories, migrations),\n"
+            "   config (settings, env, build configs),\n"
+            "   test (test files, fixtures),\n"
+            "   infra (CI/CD, Docker, deployment).\n\n"
+            "OUTPUT:\n"
+            "- services: array of {name, description, module_type, entry_points, key_files, depends_on}\n"
+            "- module_type: service|module|package|library\n"
+            "- key_files: array of {path, purpose, layer}\n"
+            "- layer: presentation|business|data|config|test|infra|unknown\n"
+            "- depends_on: names of other services/modules this one depends on\n"
+            "- Use [] if the repo has no clear modular structure.\n"
+        ),
+        max_iterations=20,
+        max_llm_calls=40,
     ),
 ]

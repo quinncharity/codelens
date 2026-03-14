@@ -79,6 +79,7 @@ export const GetAnalysisResponse = /*@__PURE__*/ proto3.makeMessageType(
     { no: 7, name: "insights", kind: "message", T: Insight, repeated: true },
     { no: 8, name: "status", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 9, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "services", kind: "message", T: ServiceModule, repeated: true },
   ],
 );
 
@@ -174,6 +175,33 @@ export const Insight = /*@__PURE__*/ proto3.makeMessageType(
     { no: 1, name: "category", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "title", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message codelens.v1.FileDetail
+ */
+export const FileDetail = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.FileDetail",
+  () => [
+    { no: 1, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "purpose", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "layer", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message codelens.v1.ServiceModule
+ */
+export const ServiceModule = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.ServiceModule",
+  () => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "description", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "module_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "entry_points", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "key_files", kind: "message", T: FileDetail, repeated: true },
+    { no: 6, name: "depends_on", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ],
 );
 

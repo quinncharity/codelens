@@ -6,7 +6,7 @@ dependencies = [
   "connect-python @ git+https://github.com/connectrpc/connect-python.git",
   "dspy>=3.1.0",
   "pydantic>=2.0.0",
-  "protobuf",
+  "protobuf>=7.34.0",
   "python-dotenv>=1.0.0",
   "starlette",
   "uvicorn[standard]",

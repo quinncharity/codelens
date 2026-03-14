@@ -104,6 +104,24 @@ class AnalysisServiceImpl(AnalysisService):
                 )
                 for i in (result.insights if result else [])
             ],
+            services=[
+                analysis_pb2.ServiceModule(
+                    name=s.name,
+                    description=s.description,
+                    module_type=s.module_type,
+                    entry_points=list(s.entry_points),
+                    key_files=[
+                        analysis_pb2.FileDetail(
+                            path=f.path,
+                            purpose=f.purpose,
+                            layer=f.layer,
+                        )
+                        for f in s.key_files
+                    ],
+                    depends_on=list(s.depends_on),
+                )
+                for s in (result.services if result else [])
+            ],
             status=rec.status,
             error=rec.error,
         )

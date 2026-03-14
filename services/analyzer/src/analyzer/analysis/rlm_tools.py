@@ -1,10 +1,25 @@
 from __future__ import annotations
 
 import json
-from pathlib import PurePosixPath
+import logging
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from analyzer.analysis.repo_snapshot import RepoSnapshot
+
+logger = logging.getLogger(__name__)
+
+_READ_REPO_FILE_MAX_BYTES = 50_000
+_BINARY_EXTENSIONS = frozenset({
+    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp", ".bmp", ".svg",
+    ".woff", ".woff2", ".ttf", ".eot", ".otf",
+    ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar",
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx",
+    ".exe", ".dll", ".so", ".dylib", ".o", ".a",
+    ".pyc", ".pyo", ".class", ".jar", ".war",
+    ".mp3", ".mp4", ".avi", ".mov", ".wav", ".flac",
+    ".sqlite", ".db", ".wasm",
+})
 
 
 def _as_snapshot_dict(snapshot: Any) -> dict[str, Any]:
@@ -132,3 +147,51 @@ def search_files(repo_snapshot: Any, keyword: str) -> str:
                         return json.dumps(matches, ensure_ascii=True)
 
     return json.dumps(matches, ensure_ascii=True)
+
+
+def make_read_repo_file(repo_root: Path):
+    """Factory that returns a read_repo_file tool bound to a specific repo checkout."""
+
+    resolved_root = repo_root.resolve()
+
+    def read_repo_file(path: str) -> str:
+        """Read any file from the cloned repository by its repo-relative path.
+
+        Unlike get_file_content (which only reads pre-loaded snapshot files),
+        this tool can read ANY file in the repo. Use it to explore source code
+        in depth when you need to understand what a specific file does.
+
+        Args:
+            path: Repo-relative path, e.g. 'src/analyzer/server.py'.
+
+        Returns:
+            The file content (up to 50KB), or an error string.
+        """
+        want = (path or "").strip()
+        if not want:
+            return "ERROR: empty path"
+
+        target = (resolved_root / want).resolve()
+        if not str(target).startswith(str(resolved_root)):
+            return "ERROR: path escapes repo root"
+
+        if not target.is_file():
+            return "NOT_FOUND"
+
+        if target.suffix.lower() in _BINARY_EXTENSIONS:
+            return f"BINARY_FILE: {want} (skipped)"
+
+        try:
+            raw = target.read_bytes()
+        except OSError as exc:
+            return f"ERROR: {exc}"
+
+        if len(raw) > _READ_REPO_FILE_MAX_BYTES:
+            raw = raw[:_READ_REPO_FILE_MAX_BYTES]
+
+        try:
+            return raw.decode("utf-8", errors="replace")
+        except Exception:
+            return f"BINARY_FILE: {want} (decode failed)"
+
+    return read_repo_file
