@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronsDownUp, ChevronsUpDown, RefreshCw } from 'lucide-react'
 import type {
   GetAnalysisResponse,
@@ -681,6 +681,10 @@ function ServiceCard({
 }) {
   const [open, setOpen] = useState(showFullDetail)
 
+  useEffect(() => {
+    setOpen(showFullDetail)
+  }, [showFullDetail])
+
   const moduleTypeLabel = (service.moduleType || 'module').toUpperCase()
 
   // Group key files by layer
@@ -818,6 +822,10 @@ function LayerFileGroup({
   showFullDetail: boolean
 }) {
   const [open, setOpen] = useState(showFullDetail)
+
+  useEffect(() => {
+    setOpen(showFullDetail)
+  }, [showFullDetail])
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import {
   ReactFlow,
   Background,
@@ -97,8 +97,16 @@ export function ArchitectureDiagram({
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges }
   }, [services])
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes)
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+
+  useEffect(() => {
+    setNodes(initialNodes)
+  }, [initialNodes, setNodes])
+
+  useEffect(() => {
+    setEdges(initialEdges)
+  }, [initialEdges, setEdges])
 
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
