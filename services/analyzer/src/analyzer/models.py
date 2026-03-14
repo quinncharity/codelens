@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re as _re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -29,12 +30,33 @@ _ALLOWED_PATTERN_CATEGORIES: set[str] = {
 }
 
 
+# DSPy wraps string field values in triple-quotes and uses !!! as type delimiters.
+# Strip those artifacts so they never appear in stored/displayed text.
+_DSPY_ARTIFACTS = _re.compile(
+    r'^[\s"\'!]+|[\s"\'!]+$'  # leading/trailing quotes, bangs, whitespace
+)
+_TRIPLE_QUOTE = _re.compile(r'^"{3,}|"{3,}$')
+_TRIPLE_BANG = _re.compile(r'^!{2,}|!{2,}$')
+
+
+def _clean_str(s: str) -> str:
+    """Strip DSPy formatting artifacts from a string value."""
+    # Iteratively strip triple-quote and triple-bang wrappers.
+    for _ in range(5):
+        prev = s
+        s = _TRIPLE_QUOTE.sub("", s).strip()
+        s = _TRIPLE_BANG.sub("", s).strip()
+        if s == prev:
+            break
+    return s
+
+
 def _as_str(v: Any) -> str:
     if v is None:
         return ""
     if isinstance(v, str):
-        return v
-    return str(v)
+        return _clean_str(v)
+    return _clean_str(str(v))
 
 
 def _clamp01(v: Any) -> float:

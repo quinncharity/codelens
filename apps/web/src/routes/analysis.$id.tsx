@@ -532,7 +532,7 @@ function buildGitHubFileUrl(
   const cleaned = gitUrl
     .replace(/\.git$/, '')
     .replace(/^git@github\.com:/, 'https://github.com/')
-  const effectiveRef = ref || 'main'
+  const effectiveRef = ref || 'HEAD'
   return `${cleaned}/blob/${effectiveRef}/${filePath}`
 }
 

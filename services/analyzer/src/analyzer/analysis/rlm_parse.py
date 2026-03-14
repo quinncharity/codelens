@@ -6,11 +6,12 @@ from analyzer.models import AnalysisResultData, Framework, Insight, Pattern, Ser
 
 
 def _as_str(v: Any) -> str:
+    from analyzer.models import _clean_str  # reuse the artifact-stripping logic
     if v is None:
         return ""
     if isinstance(v, str):
-        return v
-    return str(v)
+        return _clean_str(v)
+    return _clean_str(str(v))
 
 
 def _require_list(raw: Any, *, field: str) -> list[Any]:
