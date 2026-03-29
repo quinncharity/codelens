@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
 import importlib
 import logging
@@ -207,34 +206,40 @@ class RLMEngine:
             else contextlib.nullcontext()  # pragma: no cover
         )
 
-        # Run all sub-agents concurrently; fail the job if any agent fails.
-        coros = [
-            _run_single_agent(cfg, step=i + 1)
-            for i, cfg in enumerate(SUB_AGENTS)
-        ]
-        with dspy_ctx:
-            outcomes = await asyncio.gather(*coros, return_exceptions=True)
-
+        # Run sub-agents sequentially.
+        #
+        # DSPy's dspy.context() is a generator-based context manager backed by
+        # ContextVar.  Running multiple agents concurrently with asyncio.gather()
+        # causes CancelledError cascades because:
+        #   1. Nested settings.context() calls inside Predict.aforward() clobber
+        #      each other when coroutines interleave.
+        #   2. A failure or timeout in one litellm.acompletion() call propagates
+        #      cancellation to sibling gather() tasks.
+        #   3. DSPy's PythonInterpreter (Deno subprocess) uses blocking I/O
+        #      inside the async path, creating timing-sensitive interactions.
+        #
+        # Sequential execution is slightly slower but fully reliable.
         results: dict[str, object] = {}
         failures: list[str] = []
-        for cfg, outcome in zip(SUB_AGENTS, outcomes):
-            if isinstance(outcome, BaseException):
-                err_detail = f"{type(outcome).__name__}: {outcome}"
-                msg = f"{cfg.name}: {err_detail}"
-                failures.append(msg)
-                logger.warning("Sub-agent %s failed: %s", cfg.name, err_detail, exc_info=outcome)
-                await emit(
-                    "ANALYZE",
-                    1.0,
-                    f"{cfg.name} failed: {err_detail}",
-                    agent=cfg.name,
-                    kind="AGENT_ERROR",
-                    step=SUB_AGENTS.index(cfg) + 1,
-                    step_total=total,
-                )
-                continue
-            field, raw = outcome
-            results[field] = raw
+        with dspy_ctx:
+            for i, cfg in enumerate(SUB_AGENTS):
+                try:
+                    field, raw = await _run_single_agent(cfg, step=i + 1)
+                    results[field] = raw
+                except BaseException as exc:
+                    err_detail = f"{type(exc).__name__}: {exc}"
+                    msg = f"{cfg.name}: {err_detail}"
+                    failures.append(msg)
+                    logger.warning("Sub-agent %s failed: %s", cfg.name, err_detail, exc_info=exc)
+                    await emit(
+                        "ANALYZE",
+                        1.0,
+                        f"{cfg.name} failed: {err_detail}",
+                        agent=cfg.name,
+                        kind="AGENT_ERROR",
+                        step=i + 1,
+                        step_total=total,
+                    )
 
         if failures:
             raise RuntimeError("One or more RLM sub-agents failed: " + " | ".join(failures))
