@@ -66,7 +66,11 @@ async def _noop_emit(*args: Any, **kwargs: Any) -> None:
 # ---------------------------------------------------------------------------
 
 class _FakeLM:
-    """Mimics a dspy.LM with controllable side effects."""
+    """Mimics a dspy.LM with controllable side effects.
+
+    Does NOT subclass BaseLM — RateLimitLM's ``__init__`` accepts any object
+    that quacks like a LM.
+    """
 
     def __init__(self, *, async_effects=None, sync_effects=None, call_effects=None):
         self._async_effects = async_effects or []

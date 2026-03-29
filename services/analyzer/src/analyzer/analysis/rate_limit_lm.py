@@ -7,9 +7,9 @@ LLM call (both sync ``forward`` and async ``aforward``) and, on a
 rate-limit / 429 error, sleeps for the duration the provider requests
 (parsed from the error message) plus a small buffer.
 
-The wrapper is intentionally a *thin* proxy that delegates to the real
-``dspy.LM`` for everything else so it stays compatible across DSPy
-versions.
+The wrapper subclasses ``dspy.BaseLM`` so it passes DSPy's
+``isinstance(lm, BaseLM)`` validation, while proxying all attribute
+access to the real ``dspy.LM`` instance.
 """
 
 from __future__ import annotations
@@ -19,6 +19,8 @@ import logging
 import re
 import time
 from typing import Any
+
+from dspy.clients.base_lm import BaseLM
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +64,15 @@ def _wait_time(exc: BaseException, fallback: float) -> float:
 # Wrapper
 # ---------------------------------------------------------------------------
 
-class RateLimitLM:
+class RateLimitLM(BaseLM):
     """Drop-in wrapper around a ``dspy.LM`` that retries on rate-limit errors.
 
-    It proxies **all** attribute access to the underlying LM so that DSPy
-    sees it as the real thing (history, kwargs, model, etc.).
+    Subclasses ``BaseLM`` so DSPy's isinstance checks pass.  All attribute
+    access is proxied to the inner LM.
     """
 
-    def __init__(self, inner):
-        # Store on the instance dict directly to avoid __setattr__ recursion.
+    def __init__(self, inner: BaseLM):
+        # Skip BaseLM.__init__ — we proxy everything to inner.
         object.__setattr__(self, "_inner", inner)
 
     # --- proxy everything except forward/aforward to the real LM -----------

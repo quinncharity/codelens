@@ -64,6 +64,11 @@ function makeInitialAgents(): Record<string, AgentState> {
 }
 
 const exampleRepos: ExampleRepo[] = [
+  // Small & Fast
+  { name: 'kelseyhightower/nocode', description: 'The best way to write secure and reliable applications. Write nothing; deploy nowhere.', url: 'https://github.com/kelseyhightower/nocode', category: 'Quick Start' },
+  { name: 'expressjs/express', description: 'Fast, unopinionated, minimalist web framework for Node.js.', url: 'https://github.com/expressjs/express', category: 'Quick Start' },
+  { name: 'pallets/flask', description: 'The Python micro framework for building web applications.', url: 'https://github.com/pallets/flask', category: 'Quick Start' },
+
   // Frameworks & Libraries
   { name: 'facebook/react', description: 'A declarative, efficient, and flexible JavaScript library for building user interfaces.', url: 'https://github.com/facebook/react', category: 'Frameworks' },
   { name: 'vercel/next.js', description: 'The React Framework for the Web. Used by some of the world\'s largest companies.', url: 'https://github.com/vercel/next.js', category: 'Frameworks' },
@@ -80,6 +85,7 @@ const exampleRepos: ExampleRepo[] = [
 ]
 
 const categoryIcons: Record<string, ReactNode> = {
+  'Quick Start': <Sparkles className="w-4 h-4" />,
   'Frameworks': <Zap className="w-4 h-4" />,
   'AI & ML': <Cpu className="w-4 h-4" />,
   'Developer Tools': <Globe className="w-4 h-4" />,
