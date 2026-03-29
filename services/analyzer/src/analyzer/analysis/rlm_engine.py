@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from analyzer.analysis.engine import EmitFn
+from analyzer.analysis.rate_limit_lm import RateLimitLM
 from analyzer.analysis.rlm_agents import FUNCTIONS_AGENT, SUB_AGENTS, SubAgentConfig
 from analyzer.analysis.repo_snapshot import build_repo_snapshot
 from analyzer.analysis.rlm_parse import parse_analysis_result
@@ -69,12 +70,12 @@ class RLMEngine:
 
         await emit("ANALYZE", 0.28, "Configuring DSPy", agent="engine", kind="PHASE_START")
         temperature = _env_float("CODELENS_DSPY_TEMPERATURE", 0.0)
-        main_lm = _make_lm(dspy, lm, temperature=temperature)
+        main_lm = RateLimitLM(_make_lm(dspy, lm, temperature=temperature))
 
         sub_lm_name = os.environ.get("CODELENS_DSPY_SUB_LM", "").strip()
         if sub_lm_name:
             _validate_provider_env(sub_lm_name)
-        sub_lm = _make_lm(dspy, sub_lm_name, temperature=0.0) if sub_lm_name else None
+        sub_lm = RateLimitLM(_make_lm(dspy, sub_lm_name, temperature=0.0)) if sub_lm_name else None
 
         global_max_iterations = _env_int_opt("CODELENS_RLM_MAX_ITERATIONS")
         global_max_llm_calls = _env_int_opt("CODELENS_RLM_MAX_LLM_CALLS")
