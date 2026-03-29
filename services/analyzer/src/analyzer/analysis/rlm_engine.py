@@ -219,13 +219,14 @@ class RLMEngine:
         failures: list[str] = []
         for cfg, outcome in zip(SUB_AGENTS, outcomes):
             if isinstance(outcome, BaseException):
-                msg = f"{cfg.name}: {outcome}"
+                err_detail = f"{type(outcome).__name__}: {outcome}"
+                msg = f"{cfg.name}: {err_detail}"
                 failures.append(msg)
-                logger.warning("Sub-agent %s failed: %s", cfg.name, outcome)
+                logger.warning("Sub-agent %s failed: %s", cfg.name, err_detail, exc_info=outcome)
                 await emit(
                     "ANALYZE",
                     1.0,
-                    f"{cfg.name} failed: {outcome}",
+                    f"{cfg.name} failed: {err_detail}",
                     agent=cfg.name,
                     kind="AGENT_ERROR",
                     step=SUB_AGENTS.index(cfg) + 1,
@@ -490,7 +491,22 @@ def _make_dspy_python_interpreter():  # type: ignore[no-untyped-def]  # pragma: 
             if not any(str(a).startswith("--node-modules-dir") for a in cmd):
                 cmd.insert(2, "--node-modules-dir=auto")
 
-            node_modules = str(Path.cwd() / "node_modules")
+            # Find node_modules by walking up from CWD (uvicorn --app-dir may
+            # set CWD to src/, but node_modules lives in the service root).
+            node_modules: str | None = None
+            check = Path.cwd()
+            for _ in range(5):
+                candidate = check / "node_modules"
+                if candidate.is_dir():
+                    node_modules = str(candidate)
+                    break
+                parent = check.parent
+                if parent == check:
+                    break
+                check = parent
+            if node_modules is None:
+                node_modules = str(Path.cwd() / "node_modules")
+
             for i, a in enumerate(cmd):
                 if isinstance(a, str) and a.startswith("--allow-read="):
                     # Deno uses comma-separated allowlists for --allow-read.
