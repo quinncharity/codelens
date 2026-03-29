@@ -614,6 +614,13 @@ export declare class ServiceModule extends Message<ServiceModule> {
    */
   dependsOn: string[];
 
+  /**
+   * Functions/methods extracted from key files (populated by functions agent).
+   *
+   * @generated from field: repeated codelens.v1.FunctionDetail functions = 7;
+   */
+  functions: FunctionDetail[];
+
   constructor(data?: PartialMessage<ServiceModule>);
 
   static readonly runtime: typeof proto3;
@@ -627,5 +634,154 @@ export declare class ServiceModule extends Message<ServiceModule> {
   static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ServiceModule;
 
   static equals(a: ServiceModule | PlainMessage<ServiceModule> | undefined, b: ServiceModule | PlainMessage<ServiceModule> | undefined): boolean;
+}
+
+/**
+ * A function or method extracted from source code with an AI-generated
+ * subgoal label explaining its purpose in plain language.
+ *
+ * @generated from message codelens.v1.FunctionDetail
+ */
+export declare class FunctionDetail extends Message<FunctionDetail> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * e.g. "def process_order(self, order_id: int) -> Order"
+   *
+   * @generated from field: string signature = 2;
+   */
+  signature: string;
+
+  /**
+   * repo-relative path
+   *
+   * @generated from field: string file_path = 3;
+   */
+  filePath: string;
+
+  /**
+   * @generated from field: int32 start_line = 4;
+   */
+  startLine: number;
+
+  /**
+   * @generated from field: int32 end_line = 5;
+   */
+  endLine: number;
+
+  /**
+   * AI-generated subgoal label: 1-2 sentence plain-English explanation
+   * of what this function does (educational scaffolding).
+   *
+   * @generated from field: string purpose = 6;
+   */
+  purpose: string;
+
+  /**
+   * Complexity indicator: simple, moderate, complex.
+   *
+   * @generated from field: string complexity = 7;
+   */
+  complexity: string;
+
+  constructor(data?: PartialMessage<FunctionDetail>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.FunctionDetail";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FunctionDetail;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FunctionDetail;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FunctionDetail;
+
+  static equals(a: FunctionDetail | PlainMessage<FunctionDetail> | undefined, b: FunctionDetail | PlainMessage<FunctionDetail> | undefined): boolean;
+}
+
+/**
+ * Request/response for fetching annotated source code of a single file.
+ *
+ * @generated from message codelens.v1.GetFileSourceRequest
+ */
+export declare class GetFileSourceRequest extends Message<GetFileSourceRequest> {
+  /**
+   * @generated from field: string analysis_id = 1;
+   */
+  analysisId: string;
+
+  /**
+   * repo-relative path
+   *
+   * @generated from field: string file_path = 2;
+   */
+  filePath: string;
+
+  constructor(data?: PartialMessage<GetFileSourceRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.GetFileSourceRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFileSourceRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFileSourceRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFileSourceRequest;
+
+  static equals(a: GetFileSourceRequest | PlainMessage<GetFileSourceRequest> | undefined, b: GetFileSourceRequest | PlainMessage<GetFileSourceRequest> | undefined): boolean;
+}
+
+/**
+ * @generated from message codelens.v1.GetFileSourceResponse
+ */
+export declare class GetFileSourceResponse extends Message<GetFileSourceResponse> {
+  /**
+   * @generated from field: string file_path = 1;
+   */
+  filePath: string;
+
+  /**
+   * e.g. "python", "typescript"
+   *
+   * @generated from field: string language = 2;
+   */
+  language: string;
+
+  /**
+   * raw source code
+   *
+   * @generated from field: string source = 3;
+   */
+  source: string;
+
+  /**
+   * Annotated regions within this file (functions with subgoal labels).
+   *
+   * @generated from field: repeated codelens.v1.FunctionDetail functions = 4;
+   */
+  functions: FunctionDetail[];
+
+  /**
+   * @generated from field: int32 total_lines = 5;
+   */
+  totalLines: number;
+
+  constructor(data?: PartialMessage<GetFileSourceResponse>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.GetFileSourceResponse";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFileSourceResponse;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetFileSourceResponse;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetFileSourceResponse;
+
+  static equals(a: GetFileSourceResponse | PlainMessage<GetFileSourceResponse> | undefined, b: GetFileSourceResponse | PlainMessage<GetFileSourceResponse> | undefined): boolean;
 }
 

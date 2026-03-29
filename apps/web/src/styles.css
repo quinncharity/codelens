@@ -331,3 +331,29 @@
 .react-flow__background {
   background: hsl(var(--card)) !important;
 }
+
+/* Source code viewer */
+.source-code-viewer pre {
+  background: transparent !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.8rem !important;
+}
+
+.source-code-viewer code {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Subgoal label styling */
+.subgoal-label {
+  border-left-width: 3px;
+  border-left-style: solid;
+  font-family: 'Geist', system-ui, sans-serif;
+}
+
+/* Layer color coding */
+.layer-presentation { border-left-color: #3b82f6; }
+.layer-business { border-left-color: #10b981; }
+.layer-data { border-left-color: #8b5cf6; }
+.layer-config { border-left-color: #f59e0b; }
+.layer-test { border-left-color: #ef4444; }
+.layer-infra { border-left-color: #6b7280; }

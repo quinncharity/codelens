@@ -11,12 +11,12 @@ from functools import lru_cache
 from pathlib import Path
 
 from analyzer.analysis.engine import EmitFn
-from analyzer.analysis.rlm_agents import SUB_AGENTS, SubAgentConfig
+from analyzer.analysis.rlm_agents import FUNCTIONS_AGENT, SUB_AGENTS, SubAgentConfig
 from analyzer.analysis.repo_snapshot import build_repo_snapshot
 from analyzer.analysis.rlm_parse import parse_analysis_result
 from analyzer.analysis.rlm_streaming import run_sub_agent
 from analyzer.analysis.rlm_tools import get_file_content, list_files, make_read_repo_file, search_files
-from analyzer.models import AnalysisResultData
+from analyzer.models import AnalysisResultData, FunctionDetail
 
 logger = logging.getLogger(__name__)
 
@@ -252,7 +252,142 @@ class RLMEngine:
             insights=insights,
             services=services,
         )
-        await emit("ANALYZE", 0.90, "Analysis complete", agent="engine", kind="PHASE_END")
+
+        # --- Second pass: Functions agent ---
+        # Collect key file paths from the architecture result to feed to the functions agent.
+        key_file_paths: list[str] = []
+        for svc in result.services:
+            for kf in svc.key_files:
+                if kf.path and kf.path not in key_file_paths:
+                    key_file_paths.append(kf.path)
+            for ep in svc.entry_points:
+                if ep and ep not in key_file_paths:
+                    key_file_paths.append(ep)
+
+        if key_file_paths:
+            await emit(
+                "ANALYZE", 0.90, "Extracting functions and generating subgoal labels",
+                agent="functions", kind="AGENT_START",
+                step=total + 1, step_total=total + 1,
+            )
+
+            file_list_str = "\n".join(f"- {p}" for p in key_file_paths[:40])
+            functions_query = (
+                FUNCTIONS_AGENT.query
+                + f"\n\nFILES TO ANALYZE:\n{file_list_str}\n"
+            )
+
+            name_uc = FUNCTIONS_AGENT.name.strip().upper()
+            fn_max_iterations = (
+                _env_int_opt(f"CODELENS_RLM_{name_uc}_MAX_ITERATIONS")
+                or global_max_iterations
+                or FUNCTIONS_AGENT.max_iterations
+            )
+            fn_max_llm_calls = (
+                _env_int_opt(f"CODELENS_RLM_{name_uc}_MAX_LLM_CALLS")
+                or global_max_llm_calls
+                or FUNCTIONS_AGENT.max_llm_calls
+            )
+
+            interpreter = _make_dspy_python_interpreter()
+            try:
+                fn_kwargs = dict(
+                    max_iterations=int(fn_max_iterations),
+                    max_llm_calls=int(fn_max_llm_calls),
+                    max_output_chars=max_output_chars,
+                    verbose=bool(verbose),
+                    sub_lm=sub_lm,
+                    interpreter=interpreter,
+                    tools=[list_files, get_file_content, search_files, read_repo_file],
+                )
+                try:
+                    fn_sig_cls = getattr(sig_mod, FUNCTIONS_AGENT.signature_cls)
+                    fn_rlm = dspy.RLM(fn_sig_cls, **fn_kwargs)
+                except TypeError:
+                    fn_kwargs.pop("tools", None)
+                    fn_sig_cls = getattr(sig_mod, FUNCTIONS_AGENT.signature_cls)
+                    fn_rlm = dspy.RLM(fn_sig_cls, **fn_kwargs)
+
+                fn_pred = await run_sub_agent(
+                    dspy=dspy,
+                    rlm=fn_rlm,
+                    repo_snapshot=snapshot,
+                    query=functions_query,
+                    emit=emit,
+                    phase="ANALYZE",
+                    p_start=0.0,
+                    p_end=1.0,
+                    agent="functions",
+                    max_llm_calls=int(fn_max_llm_calls),
+                    step=total + 1,
+                    step_total=total + 1,
+                )
+
+                raw_functions = getattr(fn_pred, FUNCTIONS_AGENT.output_field, [])
+                if raw_functions is None:
+                    raw_functions = []
+
+                # Parse and validate functions, then attach to services.
+                parsed_functions: list[FunctionDetail] = []
+                if isinstance(raw_functions, list):
+                    for item in raw_functions:
+                        try:
+                            fd = (
+                                item
+                                if isinstance(item, FunctionDetail)
+                                else FunctionDetail.model_validate(item)
+                            )
+                        except Exception:
+                            continue
+                        if not fd.name.strip() or not fd.file_path.strip():
+                            continue
+                        parsed_functions.append(fd)
+
+                # Attach functions to their parent services by matching file_path.
+                svc_by_path: dict[str, int] = {}
+                for idx, svc in enumerate(result.services):
+                    for kf in svc.key_files:
+                        svc_by_path[kf.path] = idx
+                    for ep in svc.entry_points:
+                        if ep not in svc_by_path:
+                            svc_by_path[ep] = idx
+
+                svc_functions: dict[int, list[FunctionDetail]] = {}
+                for fd in parsed_functions:
+                    svc_idx = svc_by_path.get(fd.file_path)
+                    if svc_idx is not None:
+                        svc_functions.setdefault(svc_idx, []).append(fd)
+
+                # Rebuild services with functions attached.
+                updated_services = []
+                for idx, svc in enumerate(result.services):
+                    fns = svc_functions.get(idx, [])
+                    if fns:
+                        updated_services.append(svc.model_copy(update={"functions": fns}))
+                    else:
+                        updated_services.append(svc)
+
+                result = result.model_copy(update={"services": updated_services})
+
+                await emit(
+                    "ANALYZE", 1.0, "Functions extraction complete",
+                    agent="functions", kind="AGENT_END",
+                    step=total + 1, step_total=total + 1,
+                )
+            except Exception as e:
+                logger.warning("Functions agent failed (non-fatal): %s", e)
+                await emit(
+                    "ANALYZE", 1.0, f"Functions extraction failed: {e}",
+                    agent="functions", kind="AGENT_ERROR",
+                    step=total + 1, step_total=total + 1,
+                )
+            finally:
+                try:
+                    interpreter.shutdown()
+                except Exception:
+                    pass
+
+        await emit("ANALYZE", 0.92, "Analysis complete", agent="engine", kind="PHASE_END")
         return result
 
 

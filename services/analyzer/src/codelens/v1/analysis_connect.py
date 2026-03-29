@@ -7,6 +7,7 @@ from typing import Protocol
 
 from connectrpc.client import ConnectClient, ConnectClientSync
 from connectrpc.code import Code
+from connectrpc.compression import Compression
 from connectrpc.errors import ConnectError
 from connectrpc.interceptor import Interceptor, InterceptorSync
 from connectrpc.method import IdempotencyLevel, MethodInfo
@@ -25,6 +26,9 @@ class AnalysisService(Protocol):
     async def get_analysis(self, request: codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
+    async def get_file_source(self, request: codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+
     async def list_repos(self, request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
 
@@ -33,7 +37,7 @@ class AnalysisService(Protocol):
 
 
 class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
-    def __init__(self, service: AnalysisService | AsyncGenerator[AnalysisService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: AnalysisService | AsyncGenerator[AnalysisService], *, interceptors: Iterable[Interceptor]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None) -> None:
         super().__init__(
             service=service,
             endpoints=lambda svc: {
@@ -67,6 +71,16 @@ class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
                     ),
                     function=svc.get_analysis,
                 ),
+                "/codelens.v1.AnalysisService/GetFileSource": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetFileSource",
+                        service_name="codelens.v1.AnalysisService",
+                        input=codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest,
+                        output=codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_file_source,
+                ),
                 "/codelens.v1.AnalysisService/ListRepos": Endpoint.unary(
                     method=MethodInfo(
                         name="ListRepos",
@@ -90,6 +104,7 @@ class AnalysisServiceASGIApplication(ConnectASGIApplication[AnalysisService]):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
         )
 
     @property
@@ -159,6 +174,26 @@ class AnalysisServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_file_source(
+        self,
+        request: codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetFileSource",
+                service_name="codelens.v1.AnalysisService",
+                input=codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest,
+                output=codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def list_repos(
         self,
         request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest,
@@ -207,6 +242,8 @@ class AnalysisServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def get_analysis(self, request: codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
+    def get_file_source(self, request: codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def list_repos(self, request: codelens_dot_v1_dot_analysis__pb2.ListReposRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.ListReposResponse:
         raise ConnectError(Code.UNIMPLEMENTED, "Not implemented")
     def delete_repo(self, request: codelens_dot_v1_dot_analysis__pb2.DeleteRepoRequest, ctx: RequestContext) -> codelens_dot_v1_dot_analysis__pb2.DeleteRepoResponse:
@@ -214,7 +251,7 @@ class AnalysisServiceSync(Protocol):
 
 
 class AnalysisServiceWSGIApplication(ConnectWSGIApplication):
-    def __init__(self, service: AnalysisServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None) -> None:
+    def __init__(self, service: AnalysisServiceSync, interceptors: Iterable[InterceptorSync]=(), read_max_bytes: int | None = None, compressions: Iterable[Compression] | None = None) -> None:
         super().__init__(
             endpoints={
                 "/codelens.v1.AnalysisService/Analyze": EndpointSync.unary(
@@ -247,6 +284,16 @@ class AnalysisServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.get_analysis,
                 ),
+                "/codelens.v1.AnalysisService/GetFileSource": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetFileSource",
+                        service_name="codelens.v1.AnalysisService",
+                        input=codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest,
+                        output=codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_file_source,
+                ),
                 "/codelens.v1.AnalysisService/ListRepos": EndpointSync.unary(
                     method=MethodInfo(
                         name="ListRepos",
@@ -270,6 +317,7 @@ class AnalysisServiceWSGIApplication(ConnectWSGIApplication):
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
+            compressions=compressions,
         )
 
     @property
@@ -333,6 +381,26 @@ class AnalysisServiceClientSync(ConnectClientSync):
                 service_name="codelens.v1.AnalysisService",
                 input=codelens_dot_v1_dot_analysis__pb2.GetAnalysisRequest,
                 output=codelens_dot_v1_dot_analysis__pb2.GetAnalysisResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    def get_file_source(
+        self,
+        request: codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetFileSource",
+                service_name="codelens.v1.AnalysisService",
+                input=codelens_dot_v1_dot_analysis__pb2.GetFileSourceRequest,
+                output=codelens_dot_v1_dot_analysis__pb2.GetFileSourceResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -66,6 +66,20 @@ AGENT_MESSAGES: dict[str, dict[str, list[str]]] = {
             "Analyzing deployment setup",
         ],
     },
+    "functions": {
+        "LM_START": [
+            "Reading source files",
+            "Identifying function definitions",
+            "Analyzing function signatures",
+            "Writing subgoal labels",
+            "Assessing function complexity",
+        ],
+        "TOOL_START": [
+            "Reading source code",
+            "Scanning for function definitions",
+            "Tracing function boundaries",
+        ],
+    },
 }
 
 
