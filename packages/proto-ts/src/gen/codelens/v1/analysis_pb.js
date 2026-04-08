@@ -202,6 +202,53 @@ export const ServiceModule = /*@__PURE__*/ proto3.makeMessageType(
     { no: 4, name: "entry_points", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 5, name: "key_files", kind: "message", T: FileDetail, repeated: true },
     { no: 6, name: "depends_on", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "functions", kind: "message", T: FunctionDetail, repeated: true },
+  ],
+);
+
+/**
+ * A function or method extracted from source code with an AI-generated
+ * subgoal label explaining its purpose in plain language.
+ *
+ * @generated from message codelens.v1.FunctionDetail
+ */
+export const FunctionDetail = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.FunctionDetail",
+  () => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "signature", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "file_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "start_line", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "end_line", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "purpose", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "complexity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * Request/response for fetching annotated source code of a single file.
+ *
+ * @generated from message codelens.v1.GetFileSourceRequest
+ */
+export const GetFileSourceRequest = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.GetFileSourceRequest",
+  () => [
+    { no: 1, name: "analysis_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "file_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
+ * @generated from message codelens.v1.GetFileSourceResponse
+ */
+export const GetFileSourceResponse = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.GetFileSourceResponse",
+  () => [
+    { no: 1, name: "file_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "source", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "functions", kind: "message", T: FunctionDetail, repeated: true },
+    { no: 5, name: "total_lines", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ],
 );
 

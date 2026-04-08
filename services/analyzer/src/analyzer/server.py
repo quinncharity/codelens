@@ -36,7 +36,7 @@ def create_app() -> Starlette:
         repo_cache_dir=settings.repo_cache_dir,
         max_concurrent=settings.max_concurrent_jobs,
     )
-    svc = AnalysisServiceImpl(store=store, jobs=jobs)
+    svc = AnalysisServiceImpl(store=store, jobs=jobs, repo_cache_dir=settings.repo_cache_dir)
 
     rpc_app = AnalysisServiceASGIApplication(svc)
 

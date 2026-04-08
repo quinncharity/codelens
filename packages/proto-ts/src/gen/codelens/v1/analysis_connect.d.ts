@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, DeleteRepoRequest, DeleteRepoResponse, GetAnalysisRequest, GetAnalysisResponse, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
+import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, DeleteRepoRequest, DeleteRepoResponse, GetAnalysisRequest, GetAnalysisResponse, GetFileSourceRequest, GetFileSourceResponse, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -45,6 +45,17 @@ export declare const AnalysisService: {
       readonly name: "GetAnalysis",
       readonly I: typeof GetAnalysisRequest,
       readonly O: typeof GetAnalysisResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * Fetch annotated source code for a specific file in an analysis.
+     *
+     * @generated from rpc codelens.v1.AnalysisService.GetFileSource
+     */
+    readonly getFileSource: {
+      readonly name: "GetFileSource",
+      readonly I: typeof GetFileSourceRequest,
+      readonly O: typeof GetFileSourceResponse,
       readonly kind: MethodKind.Unary,
     },
     /**

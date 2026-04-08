@@ -13,6 +13,9 @@ service AnalysisService {
   // Fetch a stored analysis result by id.
   rpc GetAnalysis(GetAnalysisRequest) returns (GetAnalysisResponse);
 
+  // Fetch annotated source code for a specific file in an analysis.
+  rpc GetFileSource(GetFileSourceRequest) returns (GetFileSourceResponse);
+
   // List distinct repositories that have been analyzed (grouped by git_url + ref),
   // returning the latest analysis per repo/ref.
   rpc ListRepos(ListReposRequest) returns (ListReposResponse);
@@ -133,4 +136,36 @@ message ServiceModule {
   repeated FileDetail key_files = 5;
   // Names of other ServiceModules this one depends on.
   repeated string depends_on = 6;
+  // Functions/methods extracted from key files (populated by functions agent).
+  repeated FunctionDetail functions = 7;
+}
+
+// A function or method extracted from source code with an AI-generated
+// subgoal label explaining its purpose in plain language.
+message FunctionDetail {
+  string name = 1;
+  string signature = 2; // e.g. "def process_order(self, order_id: int) -> Order"
+  string file_path = 3; // repo-relative path
+  int32 start_line = 4;
+  int32 end_line = 5;
+  // AI-generated subgoal label: 1-2 sentence plain-English explanation
+  // of what this function does (educational scaffolding).
+  string purpose = 6;
+  // Complexity indicator: simple, moderate, complex.
+  string complexity = 7;
+}
+
+// Request/response for fetching annotated source code of a single file.
+message GetFileSourceRequest {
+  string analysis_id = 1;
+  string file_path = 2; // repo-relative path
+}
+
+message GetFileSourceResponse {
+  string file_path = 1;
+  string language = 2; // e.g. "python", "typescript"
+  string source = 3; // raw source code
+  // Annotated regions within this file (functions with subgoal labels).
+  repeated FunctionDetail functions = 4;
+  int32 total_lines = 5;
 }

@@ -167,17 +167,59 @@ class FileDetail(_message.Message):
     def __init__(self, path: _Optional[str] = ..., purpose: _Optional[str] = ..., layer: _Optional[str] = ...) -> None: ...
 
 class ServiceModule(_message.Message):
-    __slots__ = ("name", "description", "module_type", "entry_points", "key_files", "depends_on")
+    __slots__ = ("name", "description", "module_type", "entry_points", "key_files", "depends_on", "functions")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     MODULE_TYPE_FIELD_NUMBER: _ClassVar[int]
     ENTRY_POINTS_FIELD_NUMBER: _ClassVar[int]
     KEY_FILES_FIELD_NUMBER: _ClassVar[int]
     DEPENDS_ON_FIELD_NUMBER: _ClassVar[int]
+    FUNCTIONS_FIELD_NUMBER: _ClassVar[int]
     name: str
     description: str
     module_type: str
     entry_points: _containers.RepeatedScalarFieldContainer[str]
     key_files: _containers.RepeatedCompositeFieldContainer[FileDetail]
     depends_on: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., module_type: _Optional[str] = ..., entry_points: _Optional[_Iterable[str]] = ..., key_files: _Optional[_Iterable[_Union[FileDetail, _Mapping]]] = ..., depends_on: _Optional[_Iterable[str]] = ...) -> None: ...
+    functions: _containers.RepeatedCompositeFieldContainer[FunctionDetail]
+    def __init__(self, name: _Optional[str] = ..., description: _Optional[str] = ..., module_type: _Optional[str] = ..., entry_points: _Optional[_Iterable[str]] = ..., key_files: _Optional[_Iterable[_Union[FileDetail, _Mapping]]] = ..., depends_on: _Optional[_Iterable[str]] = ..., functions: _Optional[_Iterable[_Union[FunctionDetail, _Mapping]]] = ...) -> None: ...
+
+class FunctionDetail(_message.Message):
+    __slots__ = ("name", "signature", "file_path", "start_line", "end_line", "purpose", "complexity")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    SIGNATURE_FIELD_NUMBER: _ClassVar[int]
+    FILE_PATH_FIELD_NUMBER: _ClassVar[int]
+    START_LINE_FIELD_NUMBER: _ClassVar[int]
+    END_LINE_FIELD_NUMBER: _ClassVar[int]
+    PURPOSE_FIELD_NUMBER: _ClassVar[int]
+    COMPLEXITY_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    signature: str
+    file_path: str
+    start_line: int
+    end_line: int
+    purpose: str
+    complexity: str
+    def __init__(self, name: _Optional[str] = ..., signature: _Optional[str] = ..., file_path: _Optional[str] = ..., start_line: _Optional[int] = ..., end_line: _Optional[int] = ..., purpose: _Optional[str] = ..., complexity: _Optional[str] = ...) -> None: ...
+
+class GetFileSourceRequest(_message.Message):
+    __slots__ = ("analysis_id", "file_path")
+    ANALYSIS_ID_FIELD_NUMBER: _ClassVar[int]
+    FILE_PATH_FIELD_NUMBER: _ClassVar[int]
+    analysis_id: str
+    file_path: str
+    def __init__(self, analysis_id: _Optional[str] = ..., file_path: _Optional[str] = ...) -> None: ...
+
+class GetFileSourceResponse(_message.Message):
+    __slots__ = ("file_path", "language", "source", "functions", "total_lines")
+    FILE_PATH_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    FUNCTIONS_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_LINES_FIELD_NUMBER: _ClassVar[int]
+    file_path: str
+    language: str
+    source: str
+    functions: _containers.RepeatedCompositeFieldContainer[FunctionDetail]
+    total_lines: int
+    def __init__(self, file_path: _Optional[str] = ..., language: _Optional[str] = ..., source: _Optional[str] = ..., functions: _Optional[_Iterable[_Union[FunctionDetail, _Mapping]]] = ..., total_lines: _Optional[int] = ...) -> None: ...

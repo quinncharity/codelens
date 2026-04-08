@@ -2,9 +2,9 @@ import { useZoom, type ZoomLevel } from '@/components/ZoomContext'
 import { cn } from '@/lib/utils'
 
 const levels: { value: ZoomLevel; label: string; description: string }[] = [
-  { value: 1, label: 'Architecture', description: 'Dependency graph' },
-  { value: 2, label: 'Modules', description: 'Grouped by service' },
-  { value: 3, label: 'Details', description: 'Everything expanded' },
+  { value: 1, label: 'Architecture', description: 'High-level overview: how modules connect' },
+  { value: 2, label: 'Modules', description: 'Module logic: files, patterns, and flow' },
+  { value: 3, label: 'Code', description: 'Source code with AI-generated explanations' },
 ]
 
 export function ZoomControl() {

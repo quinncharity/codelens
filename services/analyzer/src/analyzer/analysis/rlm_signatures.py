@@ -4,7 +4,7 @@ from typing import Any
 
 import dspy  # type: ignore
 
-from analyzer.models import Framework, Insight, Pattern, ServiceModule
+from analyzer.models import Framework, FunctionDetail, Insight, Pattern, ServiceModule
 
 
 class SummarySignature(dspy.Signature):
@@ -51,5 +51,16 @@ class ArchitectureSignature(dspy.Signature):
 
     services: list[ServiceModule] = dspy.OutputField(
         desc="Logical services/modules with key files, entry points, and dependencies."
+    )
+
+
+class FunctionsSignature(dspy.Signature):
+    """Extract functions/methods from source files and generate educational subgoal labels."""
+
+    repo_snapshot: dict[str, Any] = dspy.InputField(desc="Repository snapshot (tree + selected file contents).")
+    query: str = dspy.InputField(desc="Task instructions including the list of files to analyze.")
+
+    functions: list[FunctionDetail] = dspy.OutputField(
+        desc="Functions/methods with signatures, line ranges, and plain-English subgoal labels."
     )
 

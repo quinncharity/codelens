@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import hashlib
+import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
@@ -12,10 +15,38 @@ from codelens.v1 import analysis_pb2
 from codelens.v1.analysis_connect import AnalysisService
 
 
+_EXT_TO_LANG: dict[str, str] = {
+    ".py": "python",
+    ".js": "javascript",
+    ".jsx": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".go": "go",
+    ".rs": "rust",
+    ".rb": "ruby",
+    ".java": "java",
+    ".c": "c",
+    ".cpp": "cpp",
+    ".h": "c",
+    ".hpp": "cpp",
+    ".css": "css",
+    ".html": "html",
+    ".json": "json",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".toml": "toml",
+    ".md": "markdown",
+    ".sh": "bash",
+    ".sql": "sql",
+    ".proto": "protobuf",
+}
+
+
 class AnalysisServiceImpl(AnalysisService):
-    def __init__(self, *, store: SQLiteStore, jobs: JobManager) -> None:
+    def __init__(self, *, store: SQLiteStore, jobs: JobManager, repo_cache_dir: Path) -> None:
         self._store = store
         self._jobs = jobs
+        self._repo_cache_dir = repo_cache_dir
 
     async def analyze(
         self, request: analysis_pb2.AnalyzeRequest, ctx: RequestContext
@@ -119,11 +150,95 @@ class AnalysisServiceImpl(AnalysisService):
                         for f in s.key_files
                     ],
                     depends_on=list(s.depends_on),
+                    functions=[
+                        analysis_pb2.FunctionDetail(
+                            name=fn.name,
+                            signature=fn.signature,
+                            file_path=fn.file_path,
+                            start_line=fn.start_line,
+                            end_line=fn.end_line,
+                            purpose=fn.purpose,
+                            complexity=fn.complexity,
+                        )
+                        for fn in s.functions
+                    ],
                 )
                 for s in (result.services if result else [])
             ],
             status=rec.status,
             error=rec.error,
+        )
+
+    async def get_file_source(
+        self, request: analysis_pb2.GetFileSourceRequest, ctx: RequestContext
+    ) -> analysis_pb2.GetFileSourceResponse:
+        analysis_id = (request.analysis_id or "").strip()
+        file_path = (request.file_path or "").strip()
+        if not analysis_id:
+            raise ConnectError(Code.INVALID_ARGUMENT, "analysis_id is required")
+        if not file_path:
+            raise ConnectError(Code.INVALID_ARGUMENT, "file_path is required")
+
+        # Security: reject path traversal attempts.
+        if ".." in file_path or file_path.startswith("/") or file_path.startswith("\\"):
+            raise ConnectError(Code.INVALID_ARGUMENT, "invalid file_path")
+
+        rec = await self._store.get(id=analysis_id)
+        if rec is None:
+            raise ConnectError(Code.NOT_FOUND, "analysis not found")
+
+        # Compute repo cache key (mirrors git_ops._safe_repo_key).
+        h = hashlib.sha256()
+        h.update(rec.git_url.encode("utf-8", "replace"))
+        h.update(b"\0")
+        h.update(rec.ref.encode("utf-8", "replace"))
+        repo_dir = self._repo_cache_dir / h.hexdigest()[:24]
+
+        full_path = repo_dir / file_path
+        if not full_path.is_file():
+            raise ConnectError(Code.NOT_FOUND, f"file not found: {file_path}")
+
+        # Ensure the resolved path doesn't escape the repo dir.
+        try:
+            full_path.resolve().relative_to(repo_dir.resolve())
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "invalid file_path")
+
+        try:
+            source = full_path.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            raise ConnectError(Code.INTERNAL, "failed to read file")
+
+        total_lines = source.count("\n") + (1 if source and not source.endswith("\n") else 0)
+
+        # Detect language from extension.
+        ext = os.path.splitext(file_path)[1].lower()
+        language = _EXT_TO_LANG.get(ext, "")
+
+        # Collect function annotations for this file from the analysis result.
+        functions: list[analysis_pb2.FunctionDetail] = []
+        if rec.result:
+            for svc in rec.result.services:
+                for fn in svc.functions:
+                    if fn.file_path == file_path:
+                        functions.append(
+                            analysis_pb2.FunctionDetail(
+                                name=fn.name,
+                                signature=fn.signature,
+                                file_path=fn.file_path,
+                                start_line=fn.start_line,
+                                end_line=fn.end_line,
+                                purpose=fn.purpose,
+                                complexity=fn.complexity,
+                            )
+                        )
+
+        return analysis_pb2.GetFileSourceResponse(
+            file_path=file_path,
+            language=language,
+            source=source,
+            functions=functions,
+            total_lines=total_lines,
         )
 
     async def list_repos(

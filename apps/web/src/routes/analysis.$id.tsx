@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, ChevronsDownUp, ChevronsUpDown, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ChevronsDownUp, ChevronsUpDown, RefreshCw, ChevronRight, FileCode, X } from 'lucide-react'
 import type {
   GetAnalysisResponse,
   Framework,
@@ -8,6 +8,8 @@ import type {
   Insight,
   ServiceModule,
   FileDetail,
+  FunctionDetail,
+  GetFileSourceResponse,
 } from '@codelens/proto-ts'
 
 import { analysisClient } from '../lib/rpc'
@@ -39,6 +41,7 @@ import {
 import { ZoomProvider, useZoom } from '@/components/ZoomContext'
 import { ZoomControl } from '@/components/ZoomControl'
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram'
+import { SourceCodeViewer } from '@/components/SourceCodeViewer'
 
 export const Route = createFileRoute('/analysis/$id')({
   component: AnalysisPage,
@@ -122,6 +125,14 @@ function AnalysisPageInner({
   const { expandAll, expandAllSections, collapseAll } = useExpandCollapse()
   const { zoomLevel, setZoomLevel } = useZoom()
 
+  // File source viewer state
+  const [activeFile, setActiveFile] = useState<{
+    path: string
+    serviceName: string
+  } | null>(null)
+  const [fileSource, setFileSource] = useState<GetFileSourceResponse | null>(null)
+  const [fileLoading, setFileLoading] = useState(false)
+
   const handleToggleAll = () => {
     if (expandAll) {
       collapseAll()
@@ -137,6 +148,8 @@ function AnalysisPageInner({
       expandAllSections()
     } else if (zoomLevel === 2 && prevZoom.current === 3) {
       collapseAll()
+      setActiveFile(null)
+      setFileSource(null)
     }
     prevZoom.current = zoomLevel
   }, [zoomLevel, expandAllSections, collapseAll])
@@ -157,6 +170,34 @@ function AnalysisPageInner({
     },
     [setZoomLevel],
   )
+
+  // Open a file in the source code viewer
+  const handleOpenFile = useCallback(
+    async (filePath: string, serviceName: string) => {
+      setActiveFile({ path: filePath, serviceName })
+      setFileLoading(true)
+      setFileSource(null)
+      try {
+        const resp = await analysisClient.getFileSource({
+          analysisId: id,
+          filePath,
+        })
+        setFileSource(resp)
+      } catch {
+        setFileSource(null)
+      } finally {
+        setFileLoading(false)
+      }
+      // Switch to code view
+      if (zoomLevel < 3) setZoomLevel(3)
+    },
+    [id, zoomLevel, setZoomLevel],
+  )
+
+  const handleCloseFile = useCallback(() => {
+    setActiveFile(null)
+    setFileSource(null)
+  }, [])
 
   const statusVariant: 'default' | 'secondary' | 'destructive' | 'outline' =
     result?.status === 'FAILED'
@@ -273,11 +314,15 @@ function AnalysisPageInner({
                 </CardContent>
               </Card>
 
-              {/* Level 1: Architecture Diagram only */}
+              {/* Level 1: Architecture Diagram with educational context */}
               {zoomLevel === 1 && result.services?.length ? (
                 <Card>
                   <CardHeader>
                     <CardTitle>Dependency Graph</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      This diagram shows how the major parts of the codebase depend on each other.
+                      Click any module to explore its files and structure.
+                    </p>
                   </CardHeader>
                   <CardContent>
                     <ArchitectureDiagram
@@ -286,6 +331,72 @@ function AnalysisPageInner({
                     />
                   </CardContent>
                 </Card>
+              ) : null}
+
+              {/* Breadcrumb when viewing a file */}
+              {activeFile && zoomLevel === 3 ? (
+                <div className="flex items-center gap-1.5 text-sm flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleCloseFile}
+                    className="text-[var(--c2)] hover:text-[var(--c1)] transition-colors"
+                  >
+                    {result.summary ? 'Repository' : 'Analysis'}
+                  </button>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+                  <button
+                    type="button"
+                    onClick={handleCloseFile}
+                    className="text-[var(--c2)] hover:text-[var(--c1)] transition-colors"
+                  >
+                    {activeFile.serviceName}
+                  </button>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+                  <span className="font-mono text-xs text-foreground">
+                    {activeFile.path}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCloseFile}
+                    className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
+                    title="Close file viewer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Source Code Viewer (Level 3 when a file is active) */}
+              {activeFile && zoomLevel === 3 ? (
+                <div className="animate-fade-in-up">
+                  {fileLoading ? (
+                    <Card>
+                      <CardContent className="py-8">
+                        <div className="flex items-center gap-3 text-muted-foreground">
+                          <FileCode className="h-5 w-5 animate-pulse" />
+                          <span className="text-sm">Loading source code...</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : fileSource ? (
+                    <SourceCodeViewer
+                      source={fileSource.source}
+                      language={fileSource.language}
+                      functions={fileSource.functions ?? []}
+                      filePath={fileSource.filePath}
+                      totalLines={fileSource.totalLines}
+                      showLabels={true}
+                    />
+                  ) : (
+                    <Card>
+                      <CardContent className="py-6">
+                        <p className="text-sm text-muted-foreground">
+                          Could not load source code for this file. The repository may no longer be cached.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               ) : null}
 
               {/* Level 2 & 3: Full content */}
@@ -303,6 +414,7 @@ function AnalysisPageInner({
                         gitUrl={gitUrl}
                         gitRef={ref}
                         showFullDetail={zoomLevel === 3}
+                        onOpenFile={handleOpenFile}
                       />
                     </CollapsibleSection>
                   ) : null}
@@ -638,11 +750,13 @@ function ArchitectureView({
   gitUrl,
   gitRef,
   showFullDetail,
+  onOpenFile,
 }: {
   services: ServiceModule[]
   gitUrl: string
   gitRef: string
   showFullDetail: boolean
+  onOpenFile?: (filePath: string, serviceName: string) => void
 }) {
   return (
     <div className="grid gap-3">
@@ -653,6 +767,7 @@ function ArchitectureView({
           gitUrl={gitUrl}
           gitRef={gitRef}
           showFullDetail={showFullDetail}
+          onOpenFile={onOpenFile}
         />
       ))}
     </div>
@@ -673,11 +788,13 @@ function ServiceCard({
   gitUrl,
   gitRef,
   showFullDetail,
+  onOpenFile,
 }: {
   service: ServiceModule
   gitUrl: string
   gitRef: string
   showFullDetail: boolean
+  onOpenFile?: (filePath: string, serviceName: string) => void
 }) {
   const [open, setOpen] = useState(showFullDetail)
 
@@ -700,6 +817,9 @@ function ServiceCard({
 
   const sortedLayers = LAYER_ORDER.filter((l) => filesByLayer[l]?.length)
 
+  // Count functions for this service
+  const functionCount = service.functions?.length ?? 0
+
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <div
@@ -719,6 +839,11 @@ function ServiceCard({
               {service.keyFiles?.length > 0 && (
                 <span className="text-xs text-muted-foreground">
                   {service.keyFiles.length} file{service.keyFiles.length !== 1 ? 's' : ''}
+                </span>
+              )}
+              {functionCount > 0 && (
+                <span className="text-xs text-[var(--c2)]">
+                  {functionCount} function{functionCount !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
@@ -742,24 +867,17 @@ function ServiceCard({
                   Entry Points
                 </span>
                 <div className="evidence-path-list mt-1">
-                  {service.entryPoints.map((ep: string) => {
-                    const url = buildGitHubFileUrl(gitUrl, gitRef, ep)
-                    return url ? (
-                      <a
-                        key={ep}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="evidence-path evidence-path-link"
-                      >
-                        {ep}
-                      </a>
-                    ) : (
-                      <div key={ep} className="evidence-path">
-                        {ep}
-                      </div>
-                    )
-                  })}
+                  {service.entryPoints.map((ep: string) => (
+                    <button
+                      key={ep}
+                      type="button"
+                      onClick={() => onOpenFile?.(ep, service.name)}
+                      className="evidence-path evidence-path-link text-left"
+                    >
+                      <FileCode className="inline h-3 w-3 mr-1.5 opacity-50" />
+                      {ep}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -797,6 +915,8 @@ function ServiceCard({
                     gitUrl={gitUrl}
                     gitRef={gitRef}
                     showFullDetail={showFullDetail}
+                    onOpenFile={(path) => onOpenFile?.(path, service.name)}
+                    functions={service.functions ?? []}
                   />
                 ))}
               </div>
@@ -814,18 +934,33 @@ function LayerFileGroup({
   gitUrl,
   gitRef,
   showFullDetail,
+  onOpenFile,
+  functions,
 }: {
   layer: string
   files: FileDetail[]
   gitUrl: string
   gitRef: string
   showFullDetail: boolean
+  onOpenFile?: (path: string) => void
+  functions?: FunctionDetail[]
 }) {
   const [open, setOpen] = useState(showFullDetail)
 
   useEffect(() => {
     setOpen(showFullDetail)
   }, [showFullDetail])
+
+  // Count functions per file
+  const fnCountByFile = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const fn of functions ?? []) {
+      if (fn.filePath) {
+        map[fn.filePath] = (map[fn.filePath] || 0) + 1
+      }
+    }
+    return map
+  }, [functions])
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -859,24 +994,25 @@ function LayerFileGroup({
               </TableHeader>
               <TableBody>
                 {files.map((f: FileDetail) => {
-                  const url = buildGitHubFileUrl(gitUrl, gitRef, f.path)
+                  const fnCount = fnCountByFile[f.path] || 0
                   return (
                     <ExpandableRow
                       key={f.path}
                       columnCount={1}
                       cells={[
                         <TableCell key="path" className="font-mono text-xs">
-                          {url ? (
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[var(--c2)] hover:underline"
-                            >
-                              {f.path}
-                            </a>
-                          ) : (
-                            f.path
+                          <button
+                            type="button"
+                            onClick={() => onOpenFile?.(f.path)}
+                            className="text-[var(--c2)] hover:text-[var(--c1)] hover:underline transition-colors text-left inline-flex items-center gap-1.5"
+                          >
+                            <FileCode className="h-3 w-3 opacity-50 shrink-0" />
+                            {f.path}
+                          </button>
+                          {fnCount > 0 && (
+                            <span className="ml-2 text-[0.6rem] text-muted-foreground/60">
+                              {fnCount} fn{fnCount !== 1 ? 's' : ''}
+                            </span>
                           )}
                         </TableCell>,
                       ]}

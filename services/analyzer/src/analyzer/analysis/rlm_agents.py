@@ -164,3 +164,49 @@ SUB_AGENTS: list[SubAgentConfig] = [
         max_llm_calls=40,
     ),
 ]
+
+
+# The functions agent runs as a second pass after architecture completes,
+# using the discovered key_files as its target list.
+FUNCTIONS_AGENT = SubAgentConfig(
+    name="functions",
+    signature_cls="FunctionsSignature",
+    output_field="functions",
+    query=(
+        "You are CodeLens, an educational code reading tool for CS1 students.\n"
+        "Your task is to extract ALL functions and methods from the given source files\n"
+        "and generate a plain-English 'subgoal label' for each one.\n\n"
+        "A 'subgoal label' is a 1-2 sentence explanation of what the function does,\n"
+        "written for a novice programmer. Think of it as the comment a great teacher\n"
+        "would write above the function to help a beginner understand its purpose.\n\n"
+        f"{_TOOLING_GUIDE}\n"
+        "RULES:\n"
+        "- Read each file listed in the query using read_repo_file(path).\n"
+        "- For every function/method definition (def, async def, class methods), extract:\n"
+        "  * name: the function/method name\n"
+        "  * signature: the full signature line (e.g. 'def foo(x: int, y: str) -> bool')\n"
+        "  * file_path: repo-relative path to the file\n"
+        "  * start_line: line number where the function definition starts (1-based)\n"
+        "  * end_line: line number where the function body ends (1-based)\n"
+        "  * purpose: a 1-2 sentence subgoal label in plain English\n"
+        "  * complexity: 'simple' (< 10 lines, straightforward), 'moderate' (10-30 lines\n"
+        "    or uses branching/loops), 'complex' (> 30 lines, nested logic, multiple paths)\n"
+        "- Write subgoal labels as if explaining to a student who knows basic Python\n"
+        "  but is reading this codebase for the first time.\n"
+        "- Focus on WHAT the function does and WHY, not HOW (avoid restating code).\n"
+        "- Include class methods (prefix with ClassName. in the name).\n"
+        "- Skip dunder methods like __init__ only if trivial (just assignments). Include\n"
+        "  __init__ if it does meaningful setup.\n"
+        "- Skip private helper functions only if truly trivial (1-2 lines).\n\n"
+        "RECOMMENDED STRATEGY:\n"
+        "1. Read each file listed below using read_repo_file(path).\n"
+        "2. Identify all function/method definitions.\n"
+        "3. For each, determine the exact line range.\n"
+        "4. Write a clear subgoal label that a CS1 student would understand.\n\n"
+        "OUTPUT:\n"
+        "- functions: array of {name, signature, file_path, start_line, end_line, purpose, complexity}\n"
+        "- Use [] if no functions found.\n"
+    ),
+    max_iterations=20,
+    max_llm_calls=35,
+)

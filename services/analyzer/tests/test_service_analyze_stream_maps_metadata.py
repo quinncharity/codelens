@@ -29,7 +29,7 @@ async def test_analyze_stream_maps_metadata(tmp_path) -> None:  # type: ignore[n
     store = SQLiteStore(tmp_path / "db.sqlite")
     await store.init()
 
-    svc = AnalysisServiceImpl(store=store, jobs=FakeJobs())  # type: ignore[arg-type]
+    svc = AnalysisServiceImpl(store=store, jobs=FakeJobs(), repo_cache_dir=tmp_path)  # type: ignore[arg-type]
 
     req = analysis_pb2.AnalyzeStreamRequest(git_url="https://example.com/repo.git", ref="")
     out = []

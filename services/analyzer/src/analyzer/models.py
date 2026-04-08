@@ -198,6 +198,12 @@ _ALLOWED_MODULE_TYPES: set[str] = {
     "library",
 }
 
+_ALLOWED_COMPLEXITIES: set[str] = {
+    "simple",
+    "moderate",
+    "complex",
+}
+
 
 class FileDetail(BaseModel):
     path: str = ""
@@ -220,6 +226,39 @@ class FileDetail(BaseModel):
         return layer
 
 
+class FunctionDetail(BaseModel):
+    name: str = ""
+    signature: str = ""
+    file_path: str = ""
+    start_line: int = 0
+    end_line: int = 0
+    purpose: str = ""
+    complexity: str = "moderate"
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    @field_validator("name", "signature", "file_path", "purpose", mode="before")
+    @classmethod
+    def _coerce_str_fields(cls, v: Any) -> str:
+        return _as_str(v).strip()
+
+    @field_validator("start_line", "end_line", mode="before")
+    @classmethod
+    def _coerce_int(cls, v: Any) -> int:
+        try:
+            return max(0, int(v))
+        except Exception:
+            return 0
+
+    @field_validator("complexity", mode="before")
+    @classmethod
+    def _normalize_complexity(cls, v: Any) -> str:
+        c = _as_str(v).strip().lower()
+        if not c or c not in _ALLOWED_COMPLEXITIES:
+            return "moderate"
+        return c
+
+
 class ServiceModule(BaseModel):
     name: str = ""
     description: str = ""
@@ -227,6 +266,7 @@ class ServiceModule(BaseModel):
     entry_points: list[str] = Field(default_factory=list)
     key_files: list[FileDetail] = Field(default_factory=list)
     depends_on: list[str] = Field(default_factory=list)
+    functions: list[FunctionDetail] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True, extra="ignore")
 

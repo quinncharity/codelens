@@ -66,6 +66,20 @@ AGENT_MESSAGES: dict[str, dict[str, list[str]]] = {
             "Analyzing deployment setup",
         ],
     },
+    "functions": {
+        "LM_START": [
+            "Reading source files",
+            "Identifying function definitions",
+            "Analyzing function signatures",
+            "Writing subgoal labels",
+            "Assessing function complexity",
+        ],
+        "TOOL_START": [
+            "Reading source code",
+            "Scanning for function definitions",
+            "Tracing function boundaries",
+        ],
+    },
 }
 
 
@@ -159,77 +173,38 @@ async def run_sub_agent(
         hb = asyncio.create_task(_heartbeat())
         try:
             return await rlm.aforward(repo_snapshot=repo_snapshot, query=query)
+        except BaseException:
+            # Re-raise the original error; heartbeat cleanup must not mask it.
+            raise
         finally:
             hb.cancel()
-            try:
+            with _suppress_all():
                 await hb
-            except Exception:
-                pass
 
-    if streamify_fn and StatusMessageProvider and StatusMessage:
-
-        class AnalysisStatusProvider(StatusMessageProvider):  # type: ignore[misc,valid-type]
-            def __init__(self, agent_name: str) -> None:
-                self.agent_name = agent_name
-                self.lm_calls = 0
-                self.tool_calls = 0
-
-            def lm_start_status_message(self, instance, inputs):  # type: ignore[no-untyped-def]
-                self.lm_calls += 1
-                msg = _friendly_message(self.agent_name, "LM_START", self.lm_calls)
-                return f"LM_START: {msg}"
-
-            def lm_end_status_message(self, outputs):  # type: ignore[no-untyped-def]
-                msg = _friendly_message(self.agent_name, "LM_START", self.lm_calls)
-                return f"LM_END: {msg}"
-
-            def tool_start_status_message(self, instance, inputs):  # type: ignore[no-untyped-def]
-                self.tool_calls += 1
-                msg = _friendly_message(self.agent_name, "TOOL_START", self.tool_calls)
-                return f"TOOL_START: {msg}"
-
-            def tool_end_status_message(self, outputs):  # type: ignore[no-untyped-def]
-                return "TOOL_END: done"
-
-        try:
-            provider = AnalysisStatusProvider(agent)
-            stream_rlm = streamify_fn(rlm, status_message_provider=provider)
-
-            pred: Any | None = None
-            last_obj: Any | None = None
-            stream = stream_rlm(repo_snapshot=repo_snapshot, query=query)
-            async for chunk in _aiter(stream):
-                if hasattr(dspy, "Prediction") and isinstance(chunk, dspy.Prediction):
-                    pred = chunk
-                    continue
-                if isinstance(chunk, StatusMessage):
-                    kind, msg = _split_kind(getattr(chunk, "message", "") or "")
-                    calls = max(0, int(getattr(provider, "lm_calls", 0)))
-                    frac = min(0.95, calls / max(1, int(max_llm_calls)))
-                    prog = p_start + (p_end - p_start) * frac
-                    await emit(
-                        phase,
-                        float(prog),
-                        msg,
-                        agent=agent,
-                        kind=kind,
-                        step=step,
-                        step_total=step_total,
-                    )
-                    continue
-                last_obj = chunk
-
-            if pred is None:
-                # Some DSPy versions might not yield a Prediction chunk. If we saw
-                # a non-status object, treat it as the final prediction-like value
-                # (best-effort) rather than re-running the agent.
-                if last_obj is not None and hasattr(last_obj, "__dict__"):
-                    return last_obj
-                return await _run_with_heartbeat()
-            return pred
-        except Exception:
-            # Streaming is best-effort; keep the analysis working even if DSPy's
-            # streaming APIs differ across versions.
-            return await _run_with_heartbeat()
-
+    # DSPy's streamify() uses AnyIO task groups internally, which can cause
+    # CancelledError cascades when multiple agents run concurrently under
+    # asyncio.gather().  Disable the streaming path and use the heartbeat-only
+    # fallback, which is simpler and works reliably with concurrent execution.
+    #
+    # Rate-limit retry is handled at the LM level (RateLimitLM) so every
+    # individual API call within the multi-iteration agent backs off properly.
     return await _run_with_heartbeat()
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+class _suppress_all:
+    """Context manager that suppresses *all* exceptions including BaseException.
+
+    ``contextlib.suppress(BaseException)`` doesn't exist, so we roll our own
+    tiny version.  Used exclusively to silence the CancelledError from the
+    heartbeat task so it cannot mask whatever real error is propagating.
+    """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args: object) -> bool:
+        return True
