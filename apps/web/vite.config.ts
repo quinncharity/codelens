@@ -5,6 +5,7 @@ import viteReact from '@vitejs/plugin-react'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'url'
+import { nitro } from 'nitro/vite'
 
 const config = defineConfig({
   // Load VITE_* env vars from the monorepo root.
@@ -22,6 +23,7 @@ const config = defineConfig({
     }),
 
     tanstackStart(),
+    nitro(),
     tailwindcss(),
     viteReact(),
   ],
