@@ -101,6 +101,25 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: extract JSON from tool calls when the model uses a 'json' tool
+// ---------------------------------------------------------------------------
+
+function extractJsonFromToolCalls(result: { text: string; steps: Array<{ toolCalls: Array<{ toolName: string; args: unknown }> }> }): string {
+  // If there's already text, prefer it
+  if (result.text.trim()) return result.text;
+  // Walk steps in reverse looking for a 'json' tool call
+  for (let i = result.steps.length - 1; i >= 0; i--) {
+    const step = result.steps[i]!;
+    for (const tc of step.toolCalls) {
+      if (tc.toolName === "json" && tc.args != null) {
+        return typeof tc.args === "string" ? tc.args : JSON.stringify(tc.args);
+      }
+    }
+  }
+  return result.text;
+}
+
+// ---------------------------------------------------------------------------
 // Run a single sub-agent
 // ---------------------------------------------------------------------------
 
@@ -147,6 +166,11 @@ async function runSubAgent(
           parameters: z.object({ path: z.string().describe("Repo-relative path") }),
           execute: async ({ path }) => readRepoFile(path),
         }),
+        json: tool({
+          description: "Return structured JSON output",
+          parameters: z.object({}).passthrough(),
+          execute: async (args) => JSON.stringify(args),
+        }),
       },
       maxSteps: 15,
     }),
@@ -156,8 +180,8 @@ async function runSubAgent(
     agent: agentCfg.name, kind: "AGENT_END", step, stepTotal: total,
   });
 
-  // Parse the text response as JSON
-  const text = result.text;
+  // Parse the text response as JSON (also check tool call args for 'json' tool)
+  const text = extractJsonFromToolCalls(result);
   try {
     return JSON.parse(text) as Record<string, unknown>;
   } catch {
@@ -274,17 +298,23 @@ export async function analyze(repoRoot: string, emit: EmitFn): Promise<AnalysisR
               parameters: z.object({ path: z.string() }),
               execute: async ({ path }) => readRepoFile(path),
             }),
+            json: tool({
+              description: "Return structured JSON output",
+              parameters: z.object({}).passthrough(),
+              execute: async (args) => JSON.stringify(args),
+            }),
           },
           maxSteps: 20,
         }),
       );
 
       let rawFunctions: unknown[];
+      const fnText = extractJsonFromToolCalls(fnResult);
       try {
-        const parsed = JSON.parse(fnResult.text) as Record<string, unknown>;
+        const parsed = JSON.parse(fnText) as Record<string, unknown>;
         rawFunctions = Array.isArray(parsed.functions) ? parsed.functions : [];
       } catch {
-        const jsonMatch = fnResult.text.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+        const jsonMatch = fnText.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
         if (jsonMatch?.[1]) {
           const parsed = JSON.parse(jsonMatch[1]) as Record<string, unknown>;
           rawFunctions = Array.isArray(parsed.functions) ? parsed.functions : [];
