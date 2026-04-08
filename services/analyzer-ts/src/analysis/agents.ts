@@ -36,7 +36,7 @@ RECOMMENDED STRATEGY:
 2. Read key manifests (package.json, pyproject.toml, go.mod, etc.).
 3. If snippets exist, read 1-3 likely entrypoints.
 
-OUTPUT: Return a JSON object with a single key "summary" containing 1-4 sentences.`,
+OUTPUT: Respond with plain text containing a JSON object with a single key "summary" containing 1-4 sentences. Do NOT use a tool call to return your final answer — just output the raw JSON text directly.`,
     maxTokens: 2048,
   },
   {
@@ -51,9 +51,10 @@ RULES:
 - Prefer manifests/lockfiles first, then cross-check imports.
 - Keep results high-signal; omit low-confidence guesses.
 
-OUTPUT: Return a JSON object with key "frameworks": array of {name, version, category, confidence}
+OUTPUT: Respond with plain text containing a JSON object with key "frameworks": array of {name, version, category, confidence}
 - category must be one of: language|web|backend|build|testing|infra|database|orm|ai|observability|api|tooling|unknown
-- Use [] if none found.`,
+- Use [] if none found.
+Do NOT use a tool call to return your final answer — just output the raw JSON text directly.`,
     maxTokens: 4096,
   },
   {
@@ -69,10 +70,11 @@ RULES:
 - Max 24 patterns total, max 6 per category.
 - Max 8 evidence_paths per pattern.
 
-OUTPUT: Return a JSON object with key "patterns": array of {name, category, description, evidence_paths, confidence}
+OUTPUT: Respond with plain text containing a JSON object with key "patterns": array of {name, category, description, evidence_paths, confidence}
 - category must be one of: architecture|implementation|quality|ai_rule|unknown
 - evidence_paths must be repo-relative paths present in the snapshot.
-- Use [] if none found.`,
+- Use [] if none found.
+Do NOT use a tool call to return your final answer — just output the raw JSON text directly.`,
     maxTokens: 8192,
   },
   {
@@ -87,9 +89,10 @@ RULES:
 - Be specific and actionable; avoid generic advice.
 - Max 10 insights.
 
-OUTPUT: Return a JSON object with key "insights": array of {category, title, description}
+OUTPUT: Respond with plain text containing a JSON object with key "insights": array of {category, title, description}
 - category examples: architecture, quality, risk, ai.
-- Use [] if none found.`,
+- Use [] if none found.
+Do NOT use a tool call to return your final answer — just output the raw JSON text directly.`,
     maxTokens: 4096,
   },
   {
@@ -106,12 +109,13 @@ RULES:
 - Use read_repo_file(path) aggressively to read source files beyond the snapshot.
 - Be thorough: read entry points, routers, handlers, models, configs.
 
-OUTPUT: Return a JSON object with key "services": array of {name, description, module_type, entry_points, key_files, depends_on}
+OUTPUT: Respond with plain text containing a JSON object with key "services": array of {name, description, module_type, entry_points, key_files, depends_on}
 - module_type: service|module|package|library
 - key_files: array of {path, purpose, layer}
 - layer: presentation|business|data|config|test|infra|unknown
 - depends_on: names of other services/modules this one depends on
-- Use [] if the repo has no clear modular structure.`,
+- Use [] if the repo has no clear modular structure.
+Do NOT use a tool call to return your final answer — just output the raw JSON text directly.`,
     maxTokens: 8192,
   },
 ];
@@ -133,7 +137,8 @@ RULES:
 - Write subgoal labels as if explaining to a student.
 - Focus on WHAT the function does and WHY, not HOW.
 
-OUTPUT: Return a JSON object with key "functions": array of {name, signature, file_path, start_line, end_line, purpose, complexity}
-- Use [] if no functions found.`,
+OUTPUT: Respond with plain text containing a JSON object with key "functions": array of {name, signature, file_path, start_line, end_line, purpose, complexity}
+- Use [] if no functions found.
+Do NOT use a tool call to return your final answer — just output the raw JSON text directly.`,
   maxTokens: 16384,
 };
