@@ -19,14 +19,6 @@ jobs:
         with:
           version: 10.28.0
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13.12"
-
-      - uses: astral-sh/setup-uv@v3
-        with:
-          version: "0.10.0"
-
       - name: Install (pnpm)
         run: pnpm install --frozen-lockfile
 

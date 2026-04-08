@@ -1,11 +1,4 @@
 [tools]
-# Required by DSPy RLM sandbox (Pyodide/WASM)
-deno = "2.6.9"
-
 # Used by the monorepo (pnpm/turbo + TypeScript tooling)
 node = "22.22.0"
 pnpm = "10.28.0"
-
-# Used by services/analyzer (see services/analyzer/package.json scripts)
-python = "3.13.12"
-uv = "0.10.0"

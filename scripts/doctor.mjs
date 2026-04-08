@@ -12,8 +12,6 @@ const expectedPnpm = String(pkgJson.packageManager ?? "").replace(/^pnpm@/, "");
 const checks = [
   { name: "node", command: "node", args: ["-v"] },
   { name: "pnpm", command: "pnpm", args: ["-v"], expected: expectedPnpm || null },
-  { name: "uv", command: "uv", args: ["--version"] },
-  { name: "deno", command: "deno", args: ["--version"] },
   { name: "buf", command: "pnpm", args: ["exec", "buf", "--version"] },
 ];
 

@@ -4,13 +4,13 @@ Analyze a Git repository and extract frameworks, patterns, and architectural ins
 
 This is a monorepo:
 - `apps/web`: TanStack Start web UI
-- `services/analyzer`: Python ConnectRPC analyzer service (ASGI)
+- `services/analyzer-ts`: TypeScript ConnectRPC analyzer service (Node.js)
 - `proto`: protobuf API contract + codegen via Buf
 - `packages/proto-ts`: generated TS stubs packaged for the web app
 
 ## Toolchain
 
-This repo uses [mise](https://mise.jdx.dev/) to pin external tools (`node`, `pnpm`, `python`, `uv`, `deno`).
+This repo uses [mise](https://mise.jdx.dev/) to pin external tools (`node`, `pnpm`).
 
 ```bash
 mise install
@@ -18,7 +18,7 @@ mise install
 
 ## Quickstart
 
-1. Install dependencies and sync Python environment:
+1. Install dependencies:
 
    ```bash
    pnpm repo:setup
@@ -45,7 +45,6 @@ Copy `.env.example` to `.env` for local settings.
 Analyzer startup does not require model credentials. These are required when you trigger analysis jobs:
 - `CODELENS_DSPY_LM` (for example `groq/openai/gpt-oss-120b`)
 - Provider API keys (for example `GROQ_API_KEY`)
-- `deno` on `PATH` (used by DSPy RLM sandbox)
 
 ## Common Commands
 
@@ -57,6 +56,5 @@ Analyzer startup does not require model credentials. These are required when you
 
 ## Troubleshooting
 
-- `ModuleNotFoundError` in analyzer: run `pnpm --filter @codelens/analyzer run sync`.
-- Analyzer port in use: stop the existing process or run `pnpm --filter @codelens/analyzer run dev:stop`.
+- Analyzer port in use: stop the existing process or change `CODELENS_PORT`.
 - Missing tool binaries: run `mise install`, then re-run `pnpm toolchain:doctor`.
