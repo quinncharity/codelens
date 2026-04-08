@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "toolchain:doctor": "node ./scripts/doctor.mjs",
-    "repo:setup": "pnpm install --frozen-lockfile && pnpm --filter @codelens/analyzer run sync && pnpm codegen",
+    "repo:setup": "pnpm install --frozen-lockfile && pnpm codegen",
     "codegen": "pnpm exec buf generate",
     "lint:proto": "pnpm exec buf lint",
     "dev": "pnpm codegen && turbo run dev --filter=@codelens/web --filter=@codelens/analyzer",
@@ -20,6 +20,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@bufbuild/buf",
+      "better-sqlite3",
       "esbuild"
     ]
   }

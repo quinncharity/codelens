@@ -1,5 +1,5 @@
 {
-  "name": "@codelens/analyzer",
+  "name": "@codelens/analyzer-py",
   "private": true,
   "scripts": {
     "sync": "uv sync --locked --dev",

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm codegen && pnpm --filter @codelens/web build",
+  "outputDirectory": "apps/web/.output",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/rpc/:path*",
+      "destination": "/api/rpc"
+    }
+  ]
+}
