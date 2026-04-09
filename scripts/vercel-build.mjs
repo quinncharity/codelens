@@ -68,21 +68,28 @@ await esbuild.build({
 });
 console.log("✔ Bundled serverless/rpc.ts");
 
-// Copy better-sqlite3 native module into the function directory.
-// With pnpm strict hoisting, the package lives in .pnpm — find it there.
-try {
-  const findCmd = `find ${join(ROOT, "node_modules/.pnpm")} -maxdepth 3 -name "better-sqlite3" -type d 2>/dev/null | head -1`;
-  const bsqlPath = execSync(findCmd, { encoding: "utf-8" }).trim();
-  if (bsqlPath) {
-    const funcBsql = join(funcDir, "node_modules/better-sqlite3");
-    cpSync(bsqlPath, funcBsql, { recursive: true, dereference: true });
-    console.log("✔ Copied better-sqlite3 native module");
-  } else {
-    console.warn("⚠ better-sqlite3 not found in node_modules/.pnpm");
+// Copy better-sqlite3 and its runtime dependencies (bindings, file-uri-to-path)
+// into the function directory. With pnpm strict hoisting the packages live in
+// .pnpm — find them there.
+function copyPnpmPackage(pkgName) {
+  try {
+    const findCmd = `find ${join(ROOT, "node_modules/.pnpm")} -maxdepth 3 -name "${pkgName}" -type d 2>/dev/null | head -1`;
+    const pkgPath = execSync(findCmd, { encoding: "utf-8" }).trim();
+    if (pkgPath) {
+      const dest = join(funcDir, "node_modules", pkgName);
+      cpSync(pkgPath, dest, { recursive: true, dereference: true });
+      console.log(`✔ Copied ${pkgName}`);
+    } else {
+      console.warn(`⚠ ${pkgName} not found in node_modules/.pnpm`);
+    }
+  } catch (e) {
+    console.warn(`⚠ Could not copy ${pkgName}:`, e.message);
   }
-} catch (e) {
-  console.warn("⚠ Could not copy better-sqlite3:", e.message);
 }
+
+copyPnpmPackage("better-sqlite3");
+copyPnpmPackage("bindings");
+copyPnpmPackage("file-uri-to-path");
 
 // Write .vc-config.json for the serverless function
 // shouldAddHelpers must be false — Vercel's helpers eagerly parse
