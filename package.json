@@ -1,6 +1,9 @@
 {
   "name": "codelens",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "toolchain:doctor": "node ./scripts/doctor.mjs",
