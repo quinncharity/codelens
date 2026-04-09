@@ -7,7 +7,7 @@
  *    inside apps/web/.vercel/output/).
  * 3. Copies that output to the repo-root .vercel/output/ where Vercel
  *    expects it.
- * 4. Bundles api/rpc.ts as a Vercel serverless function inside the output.
+ * 4. Bundles serverless/rpc.ts as a Vercel serverless function inside the output.
  * 5. Injects the /rpc rewrite into the Build Output API config so that
  *    the api/rpc serverless function is reachable.
  */
@@ -44,13 +44,13 @@ if (!existsSync(src)) {
 cpSync(src, dest, { recursive: true, force: true });
 console.log(`✔ Copied Build Output API to ${dest}`);
 
-// 4. Bundle api/rpc.ts as a serverless function using esbuild JS API
+// 4. Bundle serverless/rpc.ts as a serverless function using esbuild JS API
 const funcDir = join(dest, "functions/api/rpc.func");
 mkdirSync(funcDir, { recursive: true });
 
 const esbuild = await import("esbuild");
 await esbuild.build({
-  entryPoints: [join(ROOT, "api/rpc.ts")],
+  entryPoints: [join(ROOT, "serverless/rpc.ts")],
   bundle: true,
   platform: "node",
   target: "node20",
@@ -66,7 +66,7 @@ await esbuild.build({
     js: 'import { createRequire } from "module"; const require = createRequire(import.meta.url);',
   },
 });
-console.log("✔ Bundled api/rpc.ts");
+console.log("✔ Bundled serverless/rpc.ts");
 
 // Copy better-sqlite3 native module into the function directory.
 // With pnpm strict hoisting, the package lives in .pnpm — find it there.
