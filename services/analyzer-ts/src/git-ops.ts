@@ -1,9 +1,13 @@
 import { simpleGit } from "simple-git";
-import { execSync, execFileSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, rmSync, existsSync, createWriteStream } from "node:fs";
+import { join, dirname } from "node:path";
+import { createGunzip } from "node:zlib";
+import { pipeline } from "node:stream/promises";
 import { get as httpsGet } from "node:https";
 import type { IncomingMessage } from "node:http";
+import { extract as tarExtract } from "tar-stream";
 
 export class GitError extends Error {
   constructor(message: string) {
@@ -124,34 +128,46 @@ async function cloneViaArchive(params: {
   dest: string;
 }): Promise<void> {
   const url = buildArchiveUrl(params.gitUrl, params.ref);
-  const tmpTar = `${params.dest}.tar.gz`;
   mkdirSync(params.dest, { recursive: true });
 
   try {
     const res = await httpsFollow(url);
-    await new Promise<void>((resolve, reject) => {
-      const ws = createWriteStream(tmpTar);
-      res.pipe(ws);
-      ws.on("finish", resolve);
-      ws.on("error", reject);
-      res.on("error", reject);
-    });
 
-    // --strip-components=1 removes the top-level archive directory
-    execSync(
-      `tar -xzf "${tmpTar}" -C "${params.dest}" --strip-components=1`,
-      { stdio: "ignore" },
-    );
+    // Pipe: HTTPS response → gunzip → tar extract (pure JS, no binaries)
+    await new Promise<void>((resolve, reject) => {
+      const extract = tarExtract();
+
+      extract.on("entry", (header, stream, next) => {
+        // Strip the first path component (e.g. "repo-main/src/..." → "src/...")
+        const parts = header.name.split("/");
+        const stripped = parts.slice(1).join("/");
+
+        if (header.type === "directory" || !stripped) {
+          stream.resume();
+          next();
+          return;
+        }
+
+        const outPath = join(params.dest, stripped);
+        mkdirSync(dirname(outPath), { recursive: true });
+        const ws = createWriteStream(outPath);
+        stream.pipe(ws);
+        ws.on("finish", next);
+        ws.on("error", reject);
+      });
+
+      extract.on("finish", resolve);
+      extract.on("error", reject);
+
+      const gunzip = createGunzip();
+      gunzip.on("error", reject);
+
+      res.pipe(gunzip).pipe(extract);
+    });
   } catch (e) {
     throw new GitError(
       `Archive download/extract failed: ${e instanceof Error ? e.message : String(e)}`,
     );
-  } finally {
-    try {
-      rmSync(tmpTar);
-    } catch {
-      /* best-effort cleanup */
-    }
   }
 }
 
