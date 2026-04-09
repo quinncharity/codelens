@@ -85,14 +85,20 @@ try {
 }
 
 // Write .vc-config.json for the serverless function
+// shouldAddHelpers must be false — Vercel's helpers eagerly parse
+// application/json bodies, which drains the IncomingMessage stream before
+// ConnectRPC can read it, causing an HTTP 500.
+// maxDuration: raise from the default (10 s on Hobby) so the LLM analysis
+// pipeline has time to finish.  Hobby max is 60 s; Pro max is 300 s.
 writeFileSync(
   join(funcDir, ".vc-config.json"),
   JSON.stringify({
     runtime: "nodejs20.x",
     handler: "index.mjs",
     launcherType: "Nodejs",
-    shouldAddHelpers: true,
+    shouldAddHelpers: false,
     supportsResponseStreaming: true,
+    maxDuration: 300,
   }, null, 2)
 );
 console.log("✔ Created api/rpc serverless function");
