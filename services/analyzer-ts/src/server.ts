@@ -24,10 +24,21 @@ const handler = connectNodeAdapter({
 });
 
 const server = createServer((req, res) => {
-  // CORS headers
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
+  // CORS headers — use explicit values instead of wildcards for broader
+  // browser compatibility (some browsers mishandle wildcard `*` for
+  // Access-Control-Allow-Methods and Access-Control-Allow-Headers).
+  const origin = req.headers.origin;
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms, X-User-Agent",
+  );
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Content-Type, Connect-Protocol-Version, Grpc-Status, Grpc-Message",
+  );
+  res.setHeader("Access-Control-Max-Age", "86400");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
@@ -51,6 +62,9 @@ const server = createServer((req, res) => {
   handler(req, res);
 });
 
-server.listen(settings.port, settings.host, () => {
-  console.log(`Analyzer (TS) listening on http://${settings.host}:${settings.port}`);
+// Listen on the configured host. Use "::" for dual-stack (IPv4 + IPv6) so
+// browsers that resolve `localhost` to ::1 can connect.
+const listenHost = settings.host === "0.0.0.0" ? "::" : settings.host;
+server.listen(settings.port, listenHost, () => {
+  console.log(`Analyzer (TS) listening on http://${listenHost}:${settings.port}`);
 });
