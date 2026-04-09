@@ -21,10 +21,20 @@ const handler = connectNodeAdapter({
 });
 
 export default function rpcHandler(req: IncomingMessage, res: ServerResponse) {
-  // CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
+  // CORS — use explicit values instead of wildcards for broader
+  // browser compatibility.
+  const origin = req.headers.origin;
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms, X-User-Agent",
+  );
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Content-Type, Connect-Protocol-Version, Grpc-Status, Grpc-Message",
+  );
+  res.setHeader("Access-Control-Max-Age", "86400");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
