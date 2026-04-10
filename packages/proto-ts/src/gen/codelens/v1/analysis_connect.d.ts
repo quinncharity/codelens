@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, DeleteRepoRequest, DeleteRepoResponse, GetAnalysisRequest, GetAnalysisResponse, GetFileSourceRequest, GetFileSourceResponse, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
+import { AnalyzeRequest, AnalyzeResponse, AnalyzeStreamRequest, AnalyzeStreamResponse, DeleteRepoRequest, DeleteRepoResponse, GetAnalysisRequest, GetAnalysisResponse, GetFileSourceRequest, GetFileSourceResponse, GetRepoAnalysisRequest, ListReposRequest, ListReposResponse } from "./analysis_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -44,6 +44,17 @@ export declare const AnalysisService: {
     readonly getAnalysis: {
       readonly name: "GetAnalysis",
       readonly I: typeof GetAnalysisRequest,
+      readonly O: typeof GetAnalysisResponse,
+      readonly kind: MethodKind.Unary,
+    },
+    /**
+     * Fetch the latest stored analysis result for a specific repository/ref.
+     *
+     * @generated from rpc codelens.v1.AnalysisService.GetRepoAnalysis
+     */
+    readonly getRepoAnalysis: {
+      readonly name: "GetRepoAnalysis",
+      readonly I: typeof GetRepoAnalysisRequest,
       readonly O: typeof GetAnalysisResponse,
       readonly kind: MethodKind.Unary,
     },

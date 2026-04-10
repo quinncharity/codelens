@@ -13,6 +13,9 @@ service AnalysisService {
   // Fetch a stored analysis result by id.
   rpc GetAnalysis(GetAnalysisRequest) returns (GetAnalysisResponse);
 
+  // Fetch the latest stored analysis result for a specific repository/ref.
+  rpc GetRepoAnalysis(GetRepoAnalysisRequest) returns (GetAnalysisResponse);
+
   // Fetch annotated source code for a specific file in an analysis.
   rpc GetFileSource(GetFileSourceRequest) returns (GetFileSourceResponse);
 
@@ -52,6 +55,11 @@ message AnalyzeStreamResponse {
 
 message GetAnalysisRequest {
   string id = 1;
+}
+
+message GetRepoAnalysisRequest {
+  string git_url = 1;
+  string ref = 2; // optional branch/tag/sha
 }
 
 message GetAnalysisResponse {

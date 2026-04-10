@@ -24,6 +24,23 @@ export interface RepoSummaryRecord {
   lastUpdatedAt: string;
 }
 
+export interface AnalysisStore {
+  init(): void;
+  create(params: { id: string; gitUrl: string; ref: string }): Promise<void>;
+  setSucceeded(params: { id: string; result: AnalysisResultData }): Promise<void>;
+  setFailed(params: { id: string; error: string }): Promise<void>;
+  get(params: { id: string }): Promise<AnalysisRecord | null>;
+  getLatestForRepo(params: {
+    gitUrl: string;
+    ref: string;
+  }): Promise<AnalysisRecord | null>;
+  listRepos(params: {
+    limit: number;
+    offset: number;
+  }): Promise<RepoSummaryRecord[]>;
+  deleteRepo(params: { gitUrl: string; ref: string }): Promise<number>;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -32,11 +49,43 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function parseAnalysisRow(row:
+  | {
+      id: string;
+      git_url: string;
+      ref: string;
+      status: string;
+      result_json: string | null;
+      error: string | null;
+    }
+  | undefined,
+): AnalysisRecord | null {
+  if (!row) return null;
+
+  let result: AnalysisResultData | null = null;
+  if (row.result_json) {
+    try {
+      result = JSON.parse(row.result_json) as AnalysisResultData;
+    } catch {
+      result = null;
+    }
+  }
+
+  return {
+    id: row.id,
+    gitUrl: row.git_url,
+    ref: row.ref,
+    status: row.status,
+    result,
+    error: row.error ?? "",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 
-export class SQLiteStore {
+export class SQLiteStore implements AnalysisStore {
   private db: Database.Database | null = null;
 
   constructor(private dbPath: string) {}
@@ -67,12 +116,12 @@ export class SQLiteStore {
     `);
   }
 
-  private getDb(): Database.Database {
+  getDb(): Database.Database {
     if (!this.db) throw new Error("Store not initialized. Call init() first.");
     return this.db;
   }
 
-  create(params: { id: string; gitUrl: string; ref: string }): void {
+  async create(params: { id: string; gitUrl: string; ref: string }): Promise<void> {
     const now = nowIso();
     this.getDb()
       .prepare(
@@ -82,7 +131,7 @@ export class SQLiteStore {
       .run(params.id, params.gitUrl, params.ref, "RUNNING", now, now);
   }
 
-  setSucceeded(params: { id: string; result: AnalysisResultData }): void {
+  async setSucceeded(params: { id: string; result: AnalysisResultData }): Promise<void> {
     const now = nowIso();
     const payload = JSON.stringify(params.result);
     this.getDb()
@@ -94,7 +143,7 @@ export class SQLiteStore {
       .run("SUCCEEDED", now, payload, params.id);
   }
 
-  setFailed(params: { id: string; error: string }): void {
+  async setFailed(params: { id: string; error: string }): Promise<void> {
     const now = nowIso();
     this.getDb()
       .prepare(
@@ -105,7 +154,7 @@ export class SQLiteStore {
       .run("FAILED", now, params.error, params.id);
   }
 
-  get(params: { id: string }): AnalysisRecord | null {
+  async get(params: { id: string }): Promise<AnalysisRecord | null> {
     const row = this.getDb()
       .prepare(
         `SELECT id, git_url, ref, status, result_json, error
@@ -122,31 +171,39 @@ export class SQLiteStore {
         }
       | undefined;
 
-    if (!row) return null;
-
-    let result: AnalysisResultData | null = null;
-    if (row.result_json) {
-      try {
-        result = JSON.parse(row.result_json) as AnalysisResultData;
-      } catch {
-        result = null;
-      }
-    }
-
-    return {
-      id: row.id,
-      gitUrl: row.git_url,
-      ref: row.ref,
-      status: row.status,
-      result,
-      error: row.error ?? "",
-    };
+    return parseAnalysisRow(row);
   }
 
-  listRepos(params: {
+  async getLatestForRepo(params: {
+    gitUrl: string;
+    ref: string;
+  }): Promise<AnalysisRecord | null> {
+    const row = this.getDb()
+      .prepare(
+        `SELECT id, git_url, ref, status, result_json, error
+         FROM analyses
+         WHERE git_url = ? AND ref = ?
+         ORDER BY updated_at DESC, created_at DESC, id DESC
+         LIMIT 1`,
+      )
+      .get(params.gitUrl, params.ref) as
+      | {
+          id: string;
+          git_url: string;
+          ref: string;
+          status: string;
+          result_json: string | null;
+          error: string | null;
+        }
+      | undefined;
+
+    return parseAnalysisRow(row);
+  }
+
+  async listRepos(params: {
     limit: number;
     offset: number;
-  }): RepoSummaryRecord[] {
+  }): Promise<RepoSummaryRecord[]> {
     const rows = this.getDb()
       .prepare(
         `SELECT git_url, ref, id, status, updated_at
@@ -180,7 +237,7 @@ export class SQLiteStore {
     }));
   }
 
-  deleteRepo(params: { gitUrl: string; ref: string }): number {
+  async deleteRepo(params: { gitUrl: string; ref: string }): Promise<number> {
     const info = this.getDb()
       .prepare(`DELETE FROM analyses WHERE git_url = ? AND ref = ?`)
       .run(params.gitUrl, params.ref);

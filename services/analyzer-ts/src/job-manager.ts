@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { analyze, type EmitFn } from "./analysis/engine.js";
 import { cloneRepo, GitError } from "./git-ops.js";
-import { SQLiteStore } from "./store.js";
+import type { AnalysisStore } from "./store.js";
 import type { AnalysisResultData } from "./models.js";
 
 // ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ export class JobManager {
   private sem: Semaphore;
 
   constructor(
-    private store: SQLiteStore,
+    private store: AnalysisStore,
     private repoCacheDir: string,
     maxConcurrent: number,
   ) {
@@ -109,7 +109,7 @@ export class JobManager {
 
   async start(params: { gitUrl: string; ref: string }): Promise<string> {
     const jobId = randomUUID();
-    this.store.create({ id: jobId, gitUrl: params.gitUrl, ref: params.ref });
+    await this.store.create({ id: jobId, gitUrl: params.gitUrl, ref: params.ref });
     // Fire and forget
     this.runJob({ jobId, gitUrl: params.gitUrl, ref: params.ref, queue: null });
     return jobId;
@@ -120,7 +120,7 @@ export class JobManager {
     ref: string;
   }): Promise<{ jobId: string; queue: AsyncQueue<ProgressEvent | null> }> {
     const jobId = randomUUID();
-    this.store.create({ id: jobId, gitUrl: params.gitUrl, ref: params.ref });
+    await this.store.create({ id: jobId, gitUrl: params.gitUrl, ref: params.ref });
     const queue = new AsyncQueue<ProgressEvent | null>();
     // Fire and forget
     this.runJob({ jobId, gitUrl: params.gitUrl, ref: params.ref, queue });
@@ -181,7 +181,7 @@ export class JobManager {
         agent: "engine",
         kind: "PHASE_START",
       });
-      this.store.setSucceeded({ id: params.jobId, result });
+      await this.store.setSucceeded({ id: params.jobId, result });
       this.emit(params.queue, "STORE", 0.97, "Persist complete", {
         agent: "engine",
         kind: "PHASE_END",
@@ -192,7 +192,7 @@ export class JobManager {
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      this.store.setFailed({ id: params.jobId, error: msg });
+      await this.store.setFailed({ id: params.jobId, error: msg });
       this.emit(params.queue, "ERROR", 1.0, msg, {
         agent: "engine",
         kind: "ERROR",

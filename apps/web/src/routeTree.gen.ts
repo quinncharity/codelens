@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RepoRouteImport } from './routes/repo'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AnalysisIdRouteImport } from './routes/analysis.$id'
 
+const RepoRoute = RepoRouteImport.update({
+  id: '/repo',
+  path: '/repo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +31,43 @@ const AnalysisIdRoute = AnalysisIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/repo': typeof RepoRoute
   '/analysis/$id': typeof AnalysisIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/repo': typeof RepoRoute
   '/analysis/$id': typeof AnalysisIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/repo': typeof RepoRoute
   '/analysis/$id': typeof AnalysisIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analysis/$id'
+  fullPaths: '/' | '/repo' | '/analysis/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analysis/$id'
-  id: '__root__' | '/' | '/analysis/$id'
+  to: '/' | '/repo' | '/analysis/$id'
+  id: '__root__' | '/' | '/repo' | '/analysis/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  RepoRoute: typeof RepoRoute
   AnalysisIdRoute: typeof AnalysisIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/repo': {
+      id: '/repo'
+      path: '/repo'
+      fullPath: '/repo'
+      preLoaderRoute: typeof RepoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  RepoRoute: RepoRoute,
   AnalysisIdRoute: AnalysisIdRoute,
 }
 export const routeTree = rootRouteImport

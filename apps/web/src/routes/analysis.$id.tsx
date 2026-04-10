@@ -236,6 +236,16 @@ function AnalysisPageInner({
 
           <div className="flex items-center gap-2">
             <ZoomControl />
+            {gitUrl ? (
+              <Button asChild variant="outline">
+                <Link
+                  to="/repo"
+                  search={{ gitUrl, ref }}
+                >
+                  Permalink
+                </Link>
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               size="sm"
@@ -411,8 +421,6 @@ function AnalysisPageInner({
                     >
                       <ArchitectureView
                         services={result.services}
-                        gitUrl={gitUrl}
-                        gitRef={ref}
                         showFullDetail={zoomLevel === 3}
                         onOpenFile={handleOpenFile}
                       />
@@ -747,14 +755,10 @@ const LAYER_ORDER = [
 
 function ArchitectureView({
   services,
-  gitUrl,
-  gitRef,
   showFullDetail,
   onOpenFile,
 }: {
   services: ServiceModule[]
-  gitUrl: string
-  gitRef: string
   showFullDetail: boolean
   onOpenFile?: (filePath: string, serviceName: string) => void
 }) {
@@ -764,8 +768,6 @@ function ArchitectureView({
         <ServiceCard
           key={svc.name}
           service={svc}
-          gitUrl={gitUrl}
-          gitRef={gitRef}
           showFullDetail={showFullDetail}
           onOpenFile={onOpenFile}
         />
@@ -785,14 +787,10 @@ function scrollToService(name: string) {
 
 function ServiceCard({
   service,
-  gitUrl,
-  gitRef,
   showFullDetail,
   onOpenFile,
 }: {
   service: ServiceModule
-  gitUrl: string
-  gitRef: string
   showFullDetail: boolean
   onOpenFile?: (filePath: string, serviceName: string) => void
 }) {
@@ -912,8 +910,6 @@ function ServiceCard({
                     key={layer}
                     layer={layer}
                     files={filesByLayer[layer]}
-                    gitUrl={gitUrl}
-                    gitRef={gitRef}
                     showFullDetail={showFullDetail}
                     onOpenFile={(path) => onOpenFile?.(path, service.name)}
                     functions={service.functions ?? []}
@@ -931,16 +927,12 @@ function ServiceCard({
 function LayerFileGroup({
   layer,
   files,
-  gitUrl,
-  gitRef,
   showFullDetail,
   onOpenFile,
   functions,
 }: {
   layer: string
   files: FileDetail[]
-  gitUrl: string
-  gitRef: string
   showFullDetail: boolean
   onOpenFile?: (path: string) => void
   functions?: FunctionDetail[]

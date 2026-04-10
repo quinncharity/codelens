@@ -458,7 +458,13 @@ function Home() {
         })
 
         if (ev.phase === 'DONE' && ev.id) {
-          navigate({ to: '/analysis/$id', params: { id: ev.id } })
+          navigate({
+            to: '/repo',
+            search: {
+              gitUrl: url,
+              ref: rref,
+            },
+          })
           return
         }
 
@@ -776,8 +782,8 @@ function Home() {
 
                       <div className="flex items-center gap-2 shrink-0">
                         <Link
-                          to="/analysis/$id"
-                          params={{ id: r.lastAnalysisId }}
+                          to="/repo"
+                          search={{ gitUrl: r.gitUrl, ref: r.ref }}
                           className="rounded-md border border-[var(--c1)]/20 bg-[var(--c1)] px-3 py-1.5 font-mono text-xs text-white
                             hover:bg-[var(--c2)] transition-colors shadow-sm"
                         >

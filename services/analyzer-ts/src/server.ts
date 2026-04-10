@@ -4,8 +4,10 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 import { loadSettings } from "./config.js";
 import { SQLiteStore } from "./store.js";
+import { StudyStore } from "./study-store.js";
 import { JobManager } from "./job-manager.js";
 import { registerRoutes } from "./service.js";
+import { registerStudyRoutes } from "./study-service.js";
 
 // Load .env from monorepo root (best-effort)
 config({ path: resolve(process.cwd(), "../../.env") });
@@ -15,11 +17,15 @@ const settings = loadSettings();
 const store = new SQLiteStore(settings.dbPath);
 store.init();
 
+const studyStore = new StudyStore(store.getDb());
+studyStore.init();
+
 const jobs = new JobManager(store, settings.repoCacheDir, settings.maxConcurrentJobs);
 
 const handler = connectNodeAdapter({
   routes(router) {
     registerRoutes(router, store, jobs, settings.repoCacheDir);
+    registerStudyRoutes(router, studyStore);
   },
 });
 

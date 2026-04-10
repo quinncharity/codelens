@@ -3,10 +3,11 @@ import { AnalysisService } from "@codelens/proto-ts";
 import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, extname } from "node:path";
-import { SQLiteStore } from "./store.js";
+import type { AnalysisStore } from "./store.js";
 import { JobManager } from "./job-manager.js";
 import type { AnalysisResultData } from "./models.js";
 import { ConnectError, Code } from "@connectrpc/connect";
+import { cloneRepo } from "./git-ops.js";
 
 // ---------------------------------------------------------------------------
 // Extension → language map (mirrors Python service.py)
@@ -38,13 +39,71 @@ const EXT_TO_LANG: Record<string, string> = {
   ".proto": "protobuf",
 };
 
+function mapAnalysisResponse(rec: {
+  id: string;
+  gitUrl: string;
+  ref: string;
+  status: string;
+  error: string;
+  result: AnalysisResultData | null;
+}) {
+  const result = rec.result;
+  return {
+    id: rec.id,
+    gitUrl: rec.gitUrl,
+    ref: rec.ref,
+    summary: result?.summary ?? "",
+    frameworks: (result?.frameworks ?? []).map((f) => ({
+      name: f.name,
+      version: f.version,
+      category: f.category,
+      confidence: f.confidence,
+    })),
+    patterns: (result?.patterns ?? []).map((p) => ({
+      name: p.name,
+      category: p.category,
+      description: p.description,
+      evidencePaths: p.evidencePaths,
+      confidence: p.confidence,
+    })),
+    insights: (result?.insights ?? []).map((i) => ({
+      category: i.category,
+      title: i.title,
+      description: i.description,
+    })),
+    services: (result?.services ?? []).map((s) => ({
+      name: s.name,
+      description: s.description,
+      moduleType: s.moduleType,
+      entryPoints: s.entryPoints,
+      keyFiles: s.keyFiles.map((f) => ({
+        path: f.path,
+        purpose: f.purpose,
+        layer: f.layer,
+      })),
+      dependsOn: s.dependsOn,
+      functions: s.functions.map((fn) => ({
+        name: fn.name,
+        signature: fn.signature,
+        filePath: fn.filePath,
+        startLine: fn.startLine,
+        endLine: fn.endLine,
+        purpose: fn.purpose,
+        complexity: fn.complexity,
+      })),
+    })),
+    status: rec.status,
+    error: rec.error,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Route registration
 // ---------------------------------------------------------------------------
 
 export function registerRoutes(
   router: ConnectRouter,
-  store: SQLiteStore,
+  store: AnalysisStore,
   jobs: JobManager,
   repoCacheDir: string,
 ) {
@@ -99,57 +158,21 @@ export function registerRoutes(
       const analysisId = (req.id || "").trim();
       if (!analysisId) throw new ConnectError("id is required", Code.InvalidArgument);
 
-      const rec = store.get({ id: analysisId });
+      const rec = await store.get({ id: analysisId });
       if (!rec) throw new ConnectError("analysis not found", Code.NotFound);
 
-      const result = rec.result;
-      return {
-        id: rec.id,
-        gitUrl: rec.gitUrl,
-        ref: rec.ref,
-        summary: result?.summary ?? "",
-        frameworks: (result?.frameworks ?? []).map((f) => ({
-          name: f.name,
-          version: f.version,
-          category: f.category,
-          confidence: f.confidence,
-        })),
-        patterns: (result?.patterns ?? []).map((p) => ({
-          name: p.name,
-          category: p.category,
-          description: p.description,
-          evidencePaths: p.evidencePaths,
-          confidence: p.confidence,
-        })),
-        insights: (result?.insights ?? []).map((i) => ({
-          category: i.category,
-          title: i.title,
-          description: i.description,
-        })),
-        services: (result?.services ?? []).map((s) => ({
-          name: s.name,
-          description: s.description,
-          moduleType: s.moduleType,
-          entryPoints: s.entryPoints,
-          keyFiles: s.keyFiles.map((f) => ({
-            path: f.path,
-            purpose: f.purpose,
-            layer: f.layer,
-          })),
-          dependsOn: s.dependsOn,
-          functions: s.functions.map((fn) => ({
-            name: fn.name,
-            signature: fn.signature,
-            filePath: fn.filePath,
-            startLine: fn.startLine,
-            endLine: fn.endLine,
-            purpose: fn.purpose,
-            complexity: fn.complexity,
-          })),
-        })),
-        status: rec.status,
-        error: rec.error,
-      };
+      return mapAnalysisResponse(rec);
+    },
+
+    async getRepoAnalysis(req) {
+      const gitUrl = (req.gitUrl || "").trim();
+      const ref = (req.ref || "").trim();
+      if (!gitUrl) throw new ConnectError("git_url is required", Code.InvalidArgument);
+
+      const rec = await store.getLatestForRepo({ gitUrl, ref });
+      if (!rec) throw new ConnectError("analysis not found", Code.NotFound);
+
+      return mapAnalysisResponse(rec);
     },
 
     // Fetch annotated source code for a specific file.
@@ -164,7 +187,7 @@ export function registerRoutes(
         throw new ConnectError("invalid file_path", Code.InvalidArgument);
       }
 
-      const rec = store.get({ id: analysisId });
+      const rec = await store.get({ id: analysisId });
       if (!rec) throw new ConnectError("analysis not found", Code.NotFound);
 
       // Compute repo cache key (mirrors git-ops safeRepoKey).
@@ -174,7 +197,15 @@ export function registerRoutes(
       h.update(rec.ref, "utf8");
       const repoDir = resolve(repoCacheDir, h.digest("hex").slice(0, 24));
 
-      const fullPath = resolve(repoDir, filePath);
+      let fullPath = resolve(repoDir, filePath);
+      if (!existsSync(fullPath)) {
+        await cloneRepo({
+          gitUrl: rec.gitUrl,
+          ref: rec.ref,
+          cacheDir: repoCacheDir,
+        });
+        fullPath = resolve(repoDir, filePath);
+      }
       if (!existsSync(fullPath)) {
         throw new ConnectError(`file not found: ${filePath}`, Code.NotFound);
       }
@@ -235,7 +266,7 @@ export function registerRoutes(
       limit = Math.min(Math.max(1, limit), 200);
       offset = Math.max(0, offset);
 
-      const rows = store.listRepos({ limit, offset });
+      const rows = await store.listRepos({ limit, offset });
       return {
         repos: rows.map((r) => ({
           gitUrl: r.gitUrl,
@@ -253,7 +284,7 @@ export function registerRoutes(
       const ref = (req.ref || "").trim();
       if (!gitUrl) throw new ConnectError("git_url is required", Code.InvalidArgument);
 
-      const deletedCount = store.deleteRepo({ gitUrl, ref });
+      const deletedCount = await store.deleteRepo({ gitUrl, ref });
       return { deletedCount };
     },
   });

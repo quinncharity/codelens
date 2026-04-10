@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { connectNodeAdapter } from "@connectrpc/connect-node";
 import { join } from "node:path";
 import { SQLiteStore } from "../services/analyzer-ts/src/store.js";
+import { BlobAnalysisStore } from "../services/analyzer-ts/src/blob-store.js";
 import { JobManager } from "../services/analyzer-ts/src/job-manager.js";
 import { registerRoutes } from "../services/analyzer-ts/src/service.js";
 
@@ -22,8 +23,13 @@ try {
     process.env.CODELENS_MAX_CONCURRENT_JOBS || "1",
     10,
   );
+  const useBlobStore =
+    process.env.CODELENS_STORAGE_BACKEND === "vercel_blob" ||
+    !!process.env.BLOB_READ_WRITE_TOKEN;
 
-  const store = new SQLiteStore(dbPath);
+  const store = useBlobStore
+    ? new BlobAnalysisStore(process.env.CODELENS_BLOB_PREFIX || "codelens/v1")
+    : new SQLiteStore(dbPath);
   store.init();
   const jobs = new JobManager(store, repoCacheDir, maxConcurrentJobs);
 
@@ -33,7 +39,12 @@ try {
     },
   });
 
-  console.log("[rpc] init OK — db:", dbPath, "repos:", repoCacheDir);
+  console.log(
+    "[rpc] init OK — store:",
+    useBlobStore ? "vercel_blob" : `sqlite:${dbPath}`,
+    "repos:",
+    repoCacheDir,
+  );
 } catch (e) {
   initError = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
   console.error("[rpc] init FAILED:", initError);

@@ -190,6 +190,37 @@ export declare class GetAnalysisRequest extends Message<GetAnalysisRequest> {
 }
 
 /**
+ * @generated from message codelens.v1.GetRepoAnalysisRequest
+ */
+export declare class GetRepoAnalysisRequest extends Message<GetRepoAnalysisRequest> {
+  /**
+   * @generated from field: string git_url = 1;
+   */
+  gitUrl: string;
+
+  /**
+   * optional branch/tag/sha
+   *
+   * @generated from field: string ref = 2;
+   */
+  ref: string;
+
+  constructor(data?: PartialMessage<GetRepoAnalysisRequest>);
+
+  static readonly runtime: typeof proto3;
+  static readonly typeName = "codelens.v1.GetRepoAnalysisRequest";
+  static readonly fields: FieldList;
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetRepoAnalysisRequest;
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetRepoAnalysisRequest;
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetRepoAnalysisRequest;
+
+  static equals(a: GetRepoAnalysisRequest | PlainMessage<GetRepoAnalysisRequest> | undefined, b: GetRepoAnalysisRequest | PlainMessage<GetRepoAnalysisRequest> | undefined): boolean;
+}
+
+/**
  * @generated from message codelens.v1.GetAnalysisResponse
  */
 export declare class GetAnalysisResponse extends Message<GetAnalysisResponse> {

@@ -65,6 +65,17 @@ export const GetAnalysisRequest = /*@__PURE__*/ proto3.makeMessageType(
 );
 
 /**
+ * @generated from message codelens.v1.GetRepoAnalysisRequest
+ */
+export const GetRepoAnalysisRequest = /*@__PURE__*/ proto3.makeMessageType(
+  "codelens.v1.GetRepoAnalysisRequest",
+  () => [
+    { no: 1, name: "git_url", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "ref", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ],
+);
+
+/**
  * @generated from message codelens.v1.GetAnalysisResponse
  */
 export const GetAnalysisResponse = /*@__PURE__*/ proto3.makeMessageType(
