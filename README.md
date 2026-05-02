@@ -2,41 +2,27 @@
 
 Analyze a Git repository and extract frameworks, patterns, and architectural insights.
 
+## Try it
+
+The app is deployed at [https://codelens-self.vercel.app/](https://codelens-self.vercel.app/).
+
+## Run locally
+
+Prerequisites: [mise](https://mise.jdx.dev/) (recommended) or Node 20.x and [pnpm](https://pnpm.io/) 10.x.
+
+1. Install pinned tools: `mise install` (installs Node and pnpm versions from this repo).
+2. Install dependencies and generate protobuf code: `pnpm repo:setup`
+3. Optional: `pnpm toolchain:doctor` to verify binaries on your PATH.
+4. Optional: copy `.env.example` to `.env` and set analyzer/model keys if you run analysis jobs.
+5. Start web + analyzer: `pnpm dev`
+
+The web UI is at `http://localhost:3000`, the analyzer at `http://localhost:8080`, and ConnectRPC at `http://localhost:8080/rpc`. If something fails to start, run `pnpm toolchain:doctor`.
+
 This is a monorepo:
 - `apps/web`: TanStack Start web UI
 - `services/analyzer-ts`: TypeScript ConnectRPC analyzer service (Node.js)
 - `proto`: protobuf API contract + codegen via Buf
 - `packages/proto-ts`: generated TS stubs packaged for the web app
-
-## Toolchain
-
-This repo uses [mise](https://mise.jdx.dev/) to pin external tools (`node`, `pnpm`).
-
-```bash
-mise install
-```
-
-## Quickstart
-
-1. Install dependencies:
-
-   ```bash
-   pnpm repo:setup
-   ```
-
-2. Verify local toolchain:
-
-   ```bash
-   pnpm toolchain:doctor
-   ```
-
-3. Start development servers:
-
-   ```bash
-   pnpm dev
-   ```
-
-Web runs at `http://localhost:3000`, analyzer at `http://localhost:8080`, and ConnectRPC at `http://localhost:8080/rpc`.
 
 ## Environment
 
