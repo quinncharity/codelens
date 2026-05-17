@@ -3,8 +3,7 @@ import { createConnectTransport } from '@connectrpc/connect-web'
 
 import { AnalysisService, StudyService } from '@codelens/proto-ts'
 
-// In production (Vercel) the API lives at /rpc on the same origin.
-// In local dev the .env file overrides this to http://localhost:8080/rpc.
+// Default same-origin `/rpc`; set VITE_ANALYZER_BASE_URL (e.g. http://localhost:8080/rpc) for local dev.
 const baseUrl =
   import.meta.env.VITE_ANALYZER_BASE_URL ?? '/rpc'
 

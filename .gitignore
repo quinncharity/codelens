@@ -24,4 +24,6 @@ __pycache__/
 
 # Local data (repos, sqlite db, logs)
 .data/
-.vercel
+
+# Deployment tooling (not used by this project)
+.vercel/

@@ -218,7 +218,7 @@ export async function cloneRepo(params: {
       }
     }
   } else {
-    // Serverless environments (e.g. Vercel) without git — download archive
+    // Environments without git — download archive instead of clone
     await cloneViaArchive({ gitUrl: params.gitUrl, ref: params.ref, dest });
   }
 
